@@ -1,0 +1,100 @@
+generator client {
+  provider = "prisma-client"
+  output   = "./generated"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Customer {
+  id            Int      @id @default(autoincrement())
+  firstName     String
+  lastName      String
+  email         String?  @unique
+  phone         String?  @unique
+  loyaltyPoints Int      @default(0)
+  notes         String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime
+  Sale          Sale[]
+}
+
+model Distributor {
+  id           Int       @id @default(autoincrement())
+  name         String    @unique
+  contactEmail String?
+  phone        String?
+  deleted      Boolean   @default(false)
+  Product      Product[]
+}
+
+model Employee {
+  id       Int        @id @default(autoincrement())
+  username String     @unique
+  email    String
+  password String
+  role     String
+  LoginLog LoginLog[]
+}
+
+model Expense {
+  id       Int      @id @default(autoincrement())
+  title    String
+  amount   Float
+  category String?
+  date     DateTime @default(now())
+  note     String?
+}
+
+model LoginLog {
+  id         Int      @id @default(autoincrement())
+  employeeId Int
+  loginAt    DateTime @default(now())
+  ipAddress  String?
+  deviceInfo String?
+  status     String
+  failReason String?
+  Employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@index([employeeId])
+}
+
+model Product {
+  id            Int           @id @default(autoincrement())
+  sku           String        @unique
+  name          String        @unique
+  category      String?
+  price         Float
+  stockCount    Int
+  DateAdded     DateTime      @default(now())
+  lastModified  DateTime      @default(now())
+  deleted       Boolean
+  distributorId Int?
+  Distributor   Distributor?  @relation(fields: [distributorId], references: [id])
+  ProductSold   ProductSold[]
+}
+
+model ProductSold {
+  id          Int     @id @default(autoincrement())
+  saleId      Int
+  productName String
+  price       Float
+  discount    Float
+  quantity    Int
+  Product     Product @relation(fields: [productName], references: [name], onDelete: Cascade)
+  Sale        Sale    @relation(fields: [saleId], references: [id], onDelete: Cascade)
+}
+
+model Sale {
+  id            Int           @id @default(autoincrement())
+  total         Float
+  tax           Float
+  totalAfterTax Float
+  method        String
+  employeeName  String
+  createdAt     DateTime      @default(now())
+  customerId    Int?
+  ProductSold   ProductSold[]
+  Customer      Customer?     @relation(fields: [customerId], references: [id])
+}
