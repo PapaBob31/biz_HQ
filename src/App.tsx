@@ -1,15 +1,23 @@
 import React, { useState } from 'react';
-import AuthorizeDevice from './renderer/components/AuthorizeDevice';
+// import AuthorizeDevice from './renderer/components/AuthorizeDevice';
 import LoginScreen from './renderer/components/LoginScreen';
-import type { UserRole, CloverAuthResponse, UserSession } from './types';
+import Dashboard from './renderer/components/Dashboard';
+import Inventory from './renderer/components/Inventory';
+import SideBar from './renderer/components/SideBar';
+// import Sales from './renderer/components/Sales';
+import Expenses from './renderer/components/Expenses';
+import Settings from './renderer/components/Settings';
+import Employees from "./renderer/components/Employees"
+
+import type { User, AuthResponse } from './types';
 
 // Define the possible screens in your app
-type Page = 'Authorize' | 'Login' | 'Dashboard' | 'Inventory' | 'Sales' | 'Settings';
+type Page = 'Authorize' | 'Login' | 'Dashboard' | 'Inventory' | 'Sales' | 'Settings' | 'Employees' | 'Expenses';
+
 
 const App: React.FC = () => {
-  const [currentPage, setCurrentPage] = useState<Page>('Authorize');
-  const [isAuthorized, setIsAuthorized] = useState<boolean>(false);
-  const [user, setUser] = useState<UserSession | null>(null);
+  const [currentPage, setCurrentPage] = useState<Page>('Login');
+  const [user, setUser] = useState<User | null>(null);
 
   // This replaces the "navigateTo" placeholder
   const navigateTo = (page: Page) => {
@@ -17,66 +25,51 @@ const App: React.FC = () => {
   };
 
   // Logic for the Authorization Screen
-  const handleAuthCompletion = (data: CloverAuthResponse) => {
-    setIsAuthorized(true);
+  const handleAuthCompletion = (data: AuthResponse) => {
     
-    if (data.role === 'Admin') {
-      setUser({ username: data.username, role: 'Admin', isAuthenticated: true });
+    setUser({ username: data.username, role: data.user.role});
+    
+    if (data.user.role === 'Admin') {
       navigateTo('Dashboard');
-    } else {
-      navigateTo('Login');
-    }
-  };
-
-  // Logic for the Staff Login Screen
-  const handleLoginCompletion = (userData: UserSession) => {
-    setUser(userData);
-    
-    // Role-based landing pages as per your requirements
-    if (userData.role === 'Manager') {
-      navigateTo('Inventory');
-    } else if (userData.role === 'Cashier') {
+    } else if (data.user.role === 'Cashier') {
       navigateTo('Sales');
     } else {
       navigateTo('Inventory');
     }
+
   };
+
+  const showSidebar = !['Login'].includes(currentPage);
 
   // The "Router" - decides which component to show
   return (
-    <main className="app-container">
-      {currentPage === 'Authorize' && (
-        <AuthorizeDevice onAuthSuccess={handleAuthCompletion} />
-      )}
+    <main className="flex h-screen overflow-hidden bg-slate-50 w-screen">
+        {showSidebar && (
+          <SideBar 
+            activePage={currentPage} 
+            onNavigate={setCurrentPage} 
+            user={user} 
+          />
+        )}
+      <div className="flex-1 overflow-y-auto">
+        {/* {currentPage === 'Authorize' && (
+          <AuthorizeDevice onAuthSuccess={handleAuthCompletion} />
+        )} */}
 
-      {currentPage === 'Login' && (
-        <LoginScreen onLoginSuccess={handleLoginCompletion} />
-      )}
+        {currentPage === 'Login' && (
+          <LoginScreen onLoginSuccess={handleAuthCompletion} />
+        )}
 
-      {/* Placeholders for the screens we haven't built yet */}
-      {currentPage === 'Dashboard' && (
-        <div className="p-10">
-          <h1 className="text-3xl font-bold">Admin Dashboard</h1>
-          <p>Welcome, {user?.username}. Success! You bypassed the login.</p>
-          <button onClick={() => navigateTo('Authorize')} className="text-blue-500 underline">Logout</button>
-        </div>
-      )}
-
-      {currentPage === 'Inventory' && (
-        <div className="p-10">
-          <h1 className="text-3xl font-bold">Inventory Management</h1>
-          <p>Role: {user?.role}</p>
-        </div>
-      )}
-
-      {currentPage === 'Sales' && (
-        <div className="p-10">
-          <h1 className="text-3xl font-bold">Sales Terminal</h1>
-          <p>Ready to scan with Socket Mobile...</p>
-        </div>
-      )}
+        {currentPage === 'Dashboard' && <Dashboard />}
+        {currentPage === 'Inventory' && <Inventory />}
+        {/* {currentPage === 'Sales' && <Sales/>} */}
+        {currentPage === 'Employees' && <Employees/>}
+        {currentPage === 'Settings' && <Settings/>}
+        {currentPage === 'Expenses' && <Expenses/>}
+      </div>
     </main>
   );
 };
 
 export default App;
+

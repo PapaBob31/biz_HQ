@@ -1,15 +1,11 @@
-export type UserRole = 'Admin' | 'Manager' | 'Cashier' | 'Other';
+export type User = {
+  username: string;
+  role: 'Admin' | 'Manager' | 'Cashier' | 'Other'
+};
 
-export interface CloverAuthResponse {
+export interface AuthResponse {
   success: boolean;
-  token?: string;
-  role: UserRole;
+  user: User;
   username: string;
   error?: string;
-}
-
-export interface UserSession {
-  username: string;
-  role: UserRole;
-  isAuthenticated: boolean;
 }
