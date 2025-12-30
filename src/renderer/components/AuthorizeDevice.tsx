@@ -1,21 +1,19 @@
 import React, { useState } from 'react';
 import type { UserRole, CloverAuthResponse } from '../../types';
+import { employees }  from "../../App"
+
+
+function auth(employees: any, data: any){
+  for(let employee of employees) {
+    if (employee.username === data.username && employee.password === data.password && employee.role === data.role) {
+      return { success: true, token: "mock_clover_token_12345", role: data.role, error: "", username: data.username }
+    }
+  }
+  return { error: "Invalid Username or password or wrong role picked", success: false, username: "", role: data.role}
+}
 
 interface AuthProps {
   onAuthSuccess: (data: CloverAuthResponse) => void;
-}
-
-
-
-function authorizeCredentials({username, password}: {username: string, password: string}) {
-  const acceptedCredentials = [{"username": "Adeddamola", "password": "12345678"}] // hard-coded for now
-  for (const credential of acceptedCredentials) {
-    if (credential.username === username && credential.password === password) {
-      return {success: true, role: "Admin", username: "Adedamola"}
-    }
-  }
-  return {success: false}
-
 }
 
 const AuthorizeDevice: React.FC<AuthProps> = ({ onAuthSuccess }) => {
@@ -30,12 +28,16 @@ const AuthorizeDevice: React.FC<AuthProps> = ({ onAuthSuccess }) => {
     setError('');
 
     try {
-      // const response: CloverAuthResponse = await (window as any).electronAPI.authorizeDevice({
-      //   ...credentials,
-      //   role
-      // });
+      
+      const response: CloverAuthResponse = await (() => {
+        return new Promise((resolve) => {
+          setTimeout(() => {
+            resolve(auth(employees, {...credentials, role}))
+          }, 1500);
+        });
+      })();
 
-      const response = authorizeCredentials(credentials)
+      // const response = authorizeCredentials(credentials)
 
       if (response.success) {
         onAuthSuccess(response);
@@ -50,16 +52,16 @@ const AuthorizeDevice: React.FC<AuthProps> = ({ onAuthSuccess }) => {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-slate-50 p-4">
-      <div className="w-full max-w-md bg-white rounded-2xl shadow-xl p-8 border border-slate-200">
+    <div className="flex flex-col items-center justify-center min-h-screen bg-slate-50 p-4 w-full">
+      <div className="mx-auto w-[35%] min-w-md bg-white rounded-2xl shadow-xl p-8 border border-slate-200">
         <div className="text-center mb-8">
-          <h1 className="text-2xl font-bold text-slate-800">Clover Authorization</h1>
-          <p className="text-slate-500 text-sm mt-2">Link this device to your business account</p>
+          <h1 className="text-5xl font-bold text-slate-800">Authorization</h1>
+          <p className="text-slate-500 text-sm mt-2"><span className="text-blue-500 text-lg">Biz HQ.</span> Next Gen Business Management</p>
         </div>
 
-        <form onSubmit={handleAuth} className="space-y-5">
+        <form onSubmit={handleAuth} className="space-y-5 text-black">
           <div>
-            <label className="block text-xs font-semibold uppercase text-slate-500 mb-1">Clover Username</label>
+            <label className="block text-xs font-semibold uppercase text-slate-500 mb-1">Employee Username</label>
             <input 
               type="text" 
               className="w-full px-4 py-3 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-500 outline-none transition"
@@ -69,7 +71,7 @@ const AuthorizeDevice: React.FC<AuthProps> = ({ onAuthSuccess }) => {
           </div>
 
           <div>
-            <label className="block text-xs font-semibold uppercase text-slate-500 mb-1">Device Password</label>
+            <label className="block text-xs font-semibold uppercase text-slate-500 mb-1">Password</label>
             <input 
               type="password" 
               className="w-full px-4 py-3 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-500 outline-none transition"
@@ -95,9 +97,9 @@ const AuthorizeDevice: React.FC<AuthProps> = ({ onAuthSuccess }) => {
           <button 
             type="submit" 
             disabled={loading}
-            className={`w-full py-3 rounded-lg font-bold text-white transition ${loading ? 'bg-slate-400' : 'bg-blue-600 hover:bg-blue-700 shadow-md'}`}
+            className={`w-full py-3 rounded-lg font-bold text-white transition bg-blue-500`}
           >
-            {loading ? 'Processing...' : 'Authorize Device'}
+            {loading ? 'Processing...' : 'Login'}
           </button>
         </form>
 
@@ -111,4 +113,4 @@ const AuthorizeDevice: React.FC<AuthProps> = ({ onAuthSuccess }) => {
   );
 };
 
-export default AuthorizeDevice;
+export default AuthorizeDevice; // ${loading ? 'bg-slate-400' : 'bg-blue-600 hover:bg-blue-700 shadow-md'}
