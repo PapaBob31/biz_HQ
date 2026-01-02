@@ -216,7 +216,7 @@ export type CustomerGroupByOutputType = {
   loyaltyPoints: number
   notes: string | null
   createdAt: Date
-  updatedAt: Date
+  updatedAt: Date | null
   _count: CustomerCountAggregateOutputType | null
   _avg: CustomerAvgAggregateOutputType | null
   _sum: CustomerSumAggregateOutputType | null
@@ -251,7 +251,7 @@ export type CustomerWhereInput = {
   loyaltyPoints?: Prisma.IntFilter<"Customer"> | number
   notes?: Prisma.StringNullableFilter<"Customer"> | string | null
   createdAt?: Prisma.DateTimeFilter<"Customer"> | Date | string
-  updatedAt?: Prisma.DateTimeFilter<"Customer"> | Date | string
+  updatedAt?: Prisma.DateTimeNullableFilter<"Customer"> | Date | string | null
   Sale?: Prisma.SaleListRelationFilter
 }
 
@@ -264,7 +264,7 @@ export type CustomerOrderByWithRelationInput = {
   loyaltyPoints?: Prisma.SortOrder
   notes?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
-  updatedAt?: Prisma.SortOrder
+  updatedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   Sale?: Prisma.SaleOrderByRelationAggregateInput
 }
 
@@ -280,7 +280,7 @@ export type CustomerWhereUniqueInput = Prisma.AtLeast<{
   loyaltyPoints?: Prisma.IntFilter<"Customer"> | number
   notes?: Prisma.StringNullableFilter<"Customer"> | string | null
   createdAt?: Prisma.DateTimeFilter<"Customer"> | Date | string
-  updatedAt?: Prisma.DateTimeFilter<"Customer"> | Date | string
+  updatedAt?: Prisma.DateTimeNullableFilter<"Customer"> | Date | string | null
   Sale?: Prisma.SaleListRelationFilter
 }, "id" | "email" | "phone">
 
@@ -293,7 +293,7 @@ export type CustomerOrderByWithAggregationInput = {
   loyaltyPoints?: Prisma.SortOrder
   notes?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
-  updatedAt?: Prisma.SortOrder
+  updatedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   _count?: Prisma.CustomerCountOrderByAggregateInput
   _avg?: Prisma.CustomerAvgOrderByAggregateInput
   _max?: Prisma.CustomerMaxOrderByAggregateInput
@@ -313,7 +313,7 @@ export type CustomerScalarWhereWithAggregatesInput = {
   loyaltyPoints?: Prisma.IntWithAggregatesFilter<"Customer"> | number
   notes?: Prisma.StringNullableWithAggregatesFilter<"Customer"> | string | null
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"Customer"> | Date | string
-  updatedAt?: Prisma.DateTimeWithAggregatesFilter<"Customer"> | Date | string
+  updatedAt?: Prisma.DateTimeNullableWithAggregatesFilter<"Customer"> | Date | string | null
 }
 
 export type CustomerCreateInput = {
@@ -324,7 +324,7 @@ export type CustomerCreateInput = {
   loyaltyPoints?: number
   notes?: string | null
   createdAt?: Date | string
-  updatedAt: Date | string
+  updatedAt?: Date | string | null
   Sale?: Prisma.SaleCreateNestedManyWithoutCustomerInput
 }
 
@@ -337,7 +337,7 @@ export type CustomerUncheckedCreateInput = {
   loyaltyPoints?: number
   notes?: string | null
   createdAt?: Date | string
-  updatedAt: Date | string
+  updatedAt?: Date | string | null
   Sale?: Prisma.SaleUncheckedCreateNestedManyWithoutCustomerInput
 }
 
@@ -349,7 +349,7 @@ export type CustomerUpdateInput = {
   loyaltyPoints?: Prisma.IntFieldUpdateOperationsInput | number
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   Sale?: Prisma.SaleUpdateManyWithoutCustomerNestedInput
 }
 
@@ -362,7 +362,7 @@ export type CustomerUncheckedUpdateInput = {
   loyaltyPoints?: Prisma.IntFieldUpdateOperationsInput | number
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   Sale?: Prisma.SaleUncheckedUpdateManyWithoutCustomerNestedInput
 }
 
@@ -375,7 +375,7 @@ export type CustomerCreateManyInput = {
   loyaltyPoints?: number
   notes?: string | null
   createdAt?: Date | string
-  updatedAt: Date | string
+  updatedAt?: Date | string | null
 }
 
 export type CustomerUpdateManyMutationInput = {
@@ -386,7 +386,7 @@ export type CustomerUpdateManyMutationInput = {
   loyaltyPoints?: Prisma.IntFieldUpdateOperationsInput | number
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
 }
 
 export type CustomerUncheckedUpdateManyInput = {
@@ -398,7 +398,7 @@ export type CustomerUncheckedUpdateManyInput = {
   loyaltyPoints?: Prisma.IntFieldUpdateOperationsInput | number
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
 }
 
 export type CustomerCountOrderByAggregateInput = {
@@ -472,6 +472,10 @@ export type DateTimeFieldUpdateOperationsInput = {
   set?: Date | string
 }
 
+export type NullableDateTimeFieldUpdateOperationsInput = {
+  set?: Date | string | null
+}
+
 export type CustomerCreateNestedOneWithoutSaleInput = {
   create?: Prisma.XOR<Prisma.CustomerCreateWithoutSaleInput, Prisma.CustomerUncheckedCreateWithoutSaleInput>
   connectOrCreate?: Prisma.CustomerCreateOrConnectWithoutSaleInput
@@ -496,7 +500,7 @@ export type CustomerCreateWithoutSaleInput = {
   loyaltyPoints?: number
   notes?: string | null
   createdAt?: Date | string
-  updatedAt: Date | string
+  updatedAt?: Date | string | null
 }
 
 export type CustomerUncheckedCreateWithoutSaleInput = {
@@ -508,7 +512,7 @@ export type CustomerUncheckedCreateWithoutSaleInput = {
   loyaltyPoints?: number
   notes?: string | null
   createdAt?: Date | string
-  updatedAt: Date | string
+  updatedAt?: Date | string | null
 }
 
 export type CustomerCreateOrConnectWithoutSaleInput = {
@@ -535,7 +539,7 @@ export type CustomerUpdateWithoutSaleInput = {
   loyaltyPoints?: Prisma.IntFieldUpdateOperationsInput | number
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
 }
 
 export type CustomerUncheckedUpdateWithoutSaleInput = {
@@ -547,7 +551,7 @@ export type CustomerUncheckedUpdateWithoutSaleInput = {
   loyaltyPoints?: Prisma.IntFieldUpdateOperationsInput | number
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
 }
 
 
@@ -653,7 +657,7 @@ export type $CustomerPayload<ExtArgs extends runtime.Types.Extensions.InternalAr
     loyaltyPoints: number
     notes: string | null
     createdAt: Date
-    updatedAt: Date
+    updatedAt: Date | null
   }, ExtArgs["result"]["customer"]>
   composites: {}
 }
