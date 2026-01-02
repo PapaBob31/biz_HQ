@@ -1,13 +1,24 @@
 // src/renderer/components/LoginScreen.tsx
-import React, { useState } from 'react';
+import React, { useState, createContext } from 'react';
 import { Lock, User, ShieldCheck } from 'lucide-react';
 
 interface LoginProps {
   onLoginSuccess: (user: any) => void;
 }
 
+/* session strategy
+  1. User logs in
+  2. Acccess token is generated that never expires unless the client has been inactive for a while (2 hours)
+  3. Check
+
+  Things that invalidate access tokens
+  1. Logging out
+  2. Inactivity
+*/
+
+
 const LoginScreen: React.FC<LoginProps> = ({ onLoginSuccess }) => {
-  const [creds, setCreds] = useState({ username: '', password: '', role: '' });
+  const [creds, setCreds] = useState({ username: '', password: '', role: 'Admin' });
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
@@ -19,28 +30,28 @@ const LoginScreen: React.FC<LoginProps> = ({ onLoginSuccess }) => {
     try {
       // Connects to ipcMain.handle('user-login') via preload.ts
       const result = await (window as any).electronAPI.loginUser(creds);
-      
       if (result.success) {
-        onLoginSuccess(result.user);
+        onLoginSuccess(result.message);
       } else {
-        setError('Invalid username or password');
+        setError('Invalid username, password or role');
       }
     } catch (err) {
-      setError('Connection failed. Database offline.');
+      console.log(err)
+      setError('Error occured while trying to log employee in');
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-slate-900">
+    <div className="flex items-center justify-center min-h-screen bg-slate-50">
       <div className="w-full max-w-md p-8 bg-white rounded-2xl shadow-2xl">
         <div className="flex justify-center mb-6">
           <div className="p-3 bg-blue-100 rounded-full text-blue-600">
             <ShieldCheck size={40} />
           </div>
         </div>
-        <h1 className="text-2xl font-bold text-center text-slate-800 mb-8">Biz HQ Login</h1>
+        <h1 className="text-2xl font-bold text-center text-slate-800 mb-8">Biz HQ Employee Login</h1>
         
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
@@ -86,7 +97,7 @@ const LoginScreen: React.FC<LoginProps> = ({ onLoginSuccess }) => {
           <button 
             type="submit" 
             disabled={isLoading}
-            className="w-full py-3 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 transition"
+            className="w-full py-3 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 transition cursor-pointer"
           >
             {isLoading ? 'Authenticating...' : 'Log In'}
           </button>

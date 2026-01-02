@@ -1,5 +1,5 @@
 import React from 'react';
-import { LayoutDashboard, Package, ShoppingCart, Settings, LogOut, Store, Factory, BanknoteArrowUp } from 'lucide-react';
+import { LayoutDashboard, Package, ShoppingCart, Settings, LogOut, Store, Factory, BanknoteArrowUp, Users } from 'lucide-react';
 
 interface SidebarProps {
   activePage: string;
@@ -9,13 +9,13 @@ interface SidebarProps {
 
 const Sidebar: React.FC<SidebarProps> = ({ activePage, onNavigate, user }) => {
   const menuItems = [
-    { id: 'Dashboard', icon: <LayoutDashboard size={20}/>, label: 'Dashboard', roles: ['Admin'] },
-    { id: 'Inventory', icon: <Package size={20}/>, label: 'Inventory', roles: ['Admin', 'Manager', 'Cashier'] },
-    { id: 'Sales', icon: <ShoppingCart size={20}/>, label: 'Sales Terminal', roles: ['Admin', 'Manager', 'Cashier'] },
-    { id: 'Settings', icon: <Settings size={20}/>, label: 'Settings', roles: ['Admin'] },
-    { id: 'Employees', icon: <Factory size={20}/>, label: 'Employees', roles: ['Admin'] },
-    { id: 'Expenses', icon: <BanknoteArrowUp size={20}/>, label: 'Expenses', roles: ['Manager', 'Admin'] },
-    { id: 'Expenses', icon: <BanknoteArrowUp size={20}/>, label: 'Expenses', roles: ['Manager', 'Admin'] },
+    { id: 'Dashboard', icon: <LayoutDashboard size={20}/>, label: 'Dashboard', roles: ['ADMIN'] },
+    { id: 'Inventory', icon: <Package size={20}/>, label: 'Inventory', roles: ['ADMIN', 'MANAGER', 'CASHIER'] },
+    { id: 'Sales', icon: <ShoppingCart size={20}/>, label: 'Sales Terminal', roles: ['ADMIN', 'MANAGER', 'CASHIER'] },
+    { id: 'Settings', icon: <Settings size={20}/>, label: 'Settings', roles: ['ADMIN'] },
+    { id: 'Employees', icon: <Factory size={20}/>, label: 'Employees', roles: ['ADMIN'] },
+    { id: 'Expenses', icon: <BanknoteArrowUp size={20}/>, label: 'Expenses', roles: ['MANAGER', 'ADMIN'] },
+    { id: 'Customers', icon: <Users size={20}/>, label: 'Customers', roles: ['MANAGER', 'ADMIN', 'CASHIER'] },
   ];
 
   return (
@@ -30,7 +30,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activePage, onNavigate, user }) => {
           <button
             key={item.id}
             onClick={() => onNavigate(item.id)}
-            className={`w-full flex items-center gap-4 px-4 py-3 rounded-lg transition-all duration-200 ${
+            className={`w-full flex items-center gap-4 px-4 py-3 rounded-lg transition-all duration-200 cursor-pointer ${
               activePage === item.id 
               ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/20' 
               : 'hover:bg-slate-800 hover:text-white'

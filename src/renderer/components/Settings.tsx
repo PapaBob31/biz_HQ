@@ -58,11 +58,16 @@ const BusinessSettings = () => (
     <div className="grid grid-cols-2 gap-4">
       <div className="col-span-2">
         <label className="text-sm font-semibold">Store Name</label>
-        <input className="w-full p-2 border rounded-lg mt-1" defaultValue="Gemini Retail Hub" />
+        <input className="w-full p-2 border rounded-lg mt-1" defaultValue="X men Retail Hub" />
       </div>
-      <div>
+      <div className="col-span-2">
         <label className="text-sm font-semibold">Tax Rate (%)</label>
-        <input type="number" className="w-full p-2 border rounded-lg mt-1" defaultValue="7.5" />
+        <input type="number" className="w-full p-2 border rounded-lg mt-1" defaultValue="13" />
+      </div>
+      <h2 className="text-xl font-bold text-slate-800">Other Settings</h2>
+      <div className="col-span-2">
+        <label className="text-sm font-semibold">Low Stock Value</label>
+        <input type="number" className="w-full p-2 border rounded-lg mt-1" defaultValue="10" />
       </div>
     </div>
     <button className="flex items-center gap-2 bg-blue-600 text-white px-6 py-2 rounded-xl font-bold">

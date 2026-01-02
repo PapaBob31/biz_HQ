@@ -1,10 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { Users, Search, Plus, Phone, Mail, Award, Edit2, History, X, User, FileText, Save, Trash2 } from 'lucide-react';
-
+import type { Customer } from '../../../prisma/generated/client';
+import { AxiosHttpRequest } from "../../App"
 
 const CustomerModal = ({ isOpen, onClose, onSave, customerToEdit }: any) => {
   const [loading, setLoading] = useState(false);
   const isEdit = !!customerToEdit;
+  const api = useContext(AxiosHttpRequest)!
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -13,17 +15,16 @@ const CustomerModal = ({ isOpen, onClose, onSave, customerToEdit }: any) => {
     const formData = new FormData(e.currentTarget);
     const payload = Object.fromEntries(formData);
 
-    const url = isEdit ? `/api/customers/${customerToEdit.id}` : '/api/customers';
+    const url = isEdit ? `/api/customers/${customerToEdit.id}` : `/api/customers`;
     const method = isEdit ? 'PUT' : 'POST';
 
     try {
-      const res = await fetch(url, {
+      const res = await api.request({
+        url,
         method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
+        data: JSON.stringify(payload),
       });
-
-      if (res.ok) {
+      if (res.status == 200) {
         onSave();
         onClose();
       }
@@ -97,36 +98,42 @@ const CustomerModal = ({ isOpen, onClose, onSave, customerToEdit }: any) => {
   );
 };
 
-export function CustomerScreen() {
-  const [customers, setCustomers] = useState([]);
+export default function CustomerScreen() {
+  const [customers, setCustomers] = useState<Customer[]>([]);
   const [search, setSearch] = useState("");
-  const [selectedCustomer, setSelectedCustomer] = useState<any>(null);
+  const [selectedCustomer, setSelectedCustomer] = useState<Customer|null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const api = useContext(AxiosHttpRequest)!
 
   // Fetch Logic
   const fetchCustomers = async () => {
-    const res = await fetch(`/api/customers?search=${search}`);
-    const data = await res.json();
-    setCustomers(data);
+    const res = await api.get(`/api/customers?search=${search}`);
+    if (res.status === 200)
+      setCustomers(res.data);
   };
 
-    const handleDeleteCustomer = async (id: number) => {
-        const confirmed = window.confirm(
-            "Are you sure? This will delete the customer profile permanently. Past sales history will remain but will no longer be linked to this person."
-        );
 
-        if (confirmed) {
-            try {
-            const res = await fetch(`/api/customers/${id}`, { method: 'DELETE' });
-            if (res.ok) {
-                setSelectedCustomer(null);
-                fetchCustomers();
+  function displayEditModal() {
+    setIsModalOpen(true);
+  }
+
+  const handleDeleteCustomer = async (id: number) => {
+      const confirmed = window.confirm(
+          "Are you sure? This will delete the customer profile permanently. Past sales history will remain but will no longer be linked to this person."
+      );
+
+      if (confirmed) {
+          try {
+            const res = await api.delete(`/api/customers/${id}`, { method: 'DELETE' });
+            if (res.status === 200) {
+              setSelectedCustomer(null);
+              fetchCustomers();
             }
-            } catch (err) {
+          } catch (err) {
             alert("Error deleting customer");
-            }
-        }
-    };
+          }
+      }
+  };
 
   useEffect(() => { fetchCustomers(); }, [search]);
 
@@ -136,7 +143,7 @@ export function CustomerScreen() {
       <div className="w-1/3 flex flex-col gap-4 bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
         <div className="p-4 border-b space-y-3">
           <div className="flex justify-between items-center">
-            <h2 className="text-xl font-black flex items-center gap-2"><Users size={20}/> Directory</h2>
+            <h2 className="text-xl font-bold flex items-center gap-2"><Users size={20}/>Customer Directory</h2>
             <button 
               onClick={() => { setSelectedCustomer(null); setIsModalOpen(true); }}
               className="p-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition"
@@ -176,7 +183,7 @@ export function CustomerScreen() {
       </div>
 
       {/* Main: Customer Profile Detail */}
-      <div className="flex-1 bg-white rounded-3xl border border-slate-200 shadow-sm p-8">
+      <div className="flex-1 bg-white rounded-3xl border border-slate-200 shadow-sm p-8 overflow-y-auto">
         {selectedCustomer ? (
           <div className="space-y-8 animate-in fade-in duration-300">
             <div className="flex justify-between items-start">
@@ -190,8 +197,14 @@ export function CustomerScreen() {
                 </div>
               </div>
               <div className="flex gap-2">
-                <button className="p-3 bg-slate-100 rounded-2xl text-slate-600 hover:bg-slate-200 transition"><Edit2 size={20}/></button>
-                <button className="p-3 bg-red-50 rounded-2xl text-red-600 hover:bg-red-100 transition"><Trash2 size={20}/></button>
+                <button className="p-3 bg-slate-100 rounded-2xl text-slate-600 hover:bg-slate-200 transition"
+                  onClick={() => displayEditModal()}>
+                  <Edit2 size={20}/>
+                </button>
+                <button className="p-3 bg-red-50 rounded-2xl text-red-600 hover:bg-red-100 transition" 
+                  onClick={() => handleDeleteCustomer(selectedCustomer.id)}>
+                    <Trash2 size={20}/>
+                </button>
               </div>
             </div>
 
@@ -225,6 +238,7 @@ export function CustomerScreen() {
           </div>
         )}
       </div>
+      <CustomerModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onSave={()=>fetchCustomers()} customerToEdit={selectedCustomer}/>
     </div>
   );
 };

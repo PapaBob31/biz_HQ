@@ -1,5 +1,4 @@
-import React, { useState } from 'react';
-// import AuthorizeDevice from './renderer/components/AuthorizeDevice';
+import React, { useState, createContext  } from 'react';
 import LoginScreen from './renderer/components/LoginScreen';
 import Dashboard from './renderer/components/Dashboard';
 import Inventory from './renderer/components/Inventory';
@@ -8,40 +7,63 @@ import SideBar from './renderer/components/SideBar';
 import Expenses from './renderer/components/Expenses';
 import Settings from './renderer/components/Settings';
 import Employees from "./renderer/components/Employees"
+import Customers from "./renderer/components/Customers"
+import axios, { type AxiosInstance } from 'axios';
 
-import type { User, AuthResponse } from './types';
+type Page = 'Authorize' | 'Login' | 'Dashboard' | 'Inventory' | 'Sales' | 'Settings' | 'Employees' | 'Expenses' | 'Customers';
 
-// Define the possible screens in your app
-type Page = 'Authorize' | 'Login' | 'Dashboard' | 'Inventory' | 'Sales' | 'Settings' | 'Employees' | 'Expenses';
+interface NonSensitiveUserData {
+  id: number;
+  username: string;
+  email: string;
+  role:  "ADMIN" | "CASHIER" | "MANAGER" | "OTHER" | ""
+}
+
+const API_BASE_URL = "http://localhost:3000";
+export const AxiosHttpRequest = createContext<AxiosInstance | null>(null)
 
 
 const App: React.FC = () => {
   const [currentPage, setCurrentPage] = useState<Page>('Login');
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<NonSensitiveUserData | null>(null);
+  const [accessToken, setAccessToken] = useState("")
 
-  // This replaces the "navigateTo" placeholder
   const navigateTo = (page: Page) => {
     setCurrentPage(page);
   };
 
-  // Logic for the Authorization Screen
-  const handleAuthCompletion = (data: AuthResponse) => {
+  function handleAuthCompletion(accessToken: string) {
+    setAccessToken(accessToken)
+    const userData = JSON.parse(atob(accessToken.split('.')[1]))
+
+    setUser(userData);
     
-    setUser({ username: data.username, role: data.user.role});
-    
-    if (data.user.role === 'Admin') {
+    if (userData.role === 'ADMIN') {
       navigateTo('Dashboard');
-    } else if (data.user.role === 'Cashier') {
+    } else if (userData.role === 'CASHIER') {
       navigateTo('Sales');
     } else {
       navigateTo('Inventory');
     }
-
   };
+
+  const api = axios.create({ baseURL: API_BASE_URL, headers: {'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json'} });
+
+  api.interceptors.response.use((response) => {
+    const newToken = response.headers['x-new-access-token'];
+    if (newToken) {
+      api.defaults.headers.common['Authorization'] = `Bearer ${newToken}`;
+    }
+    return response;
+  }, (error) => {
+    if (error.response?.status === 401) {
+    }
+    return Promise.reject(error);
+  });
+
 
   const showSidebar = !['Login'].includes(currentPage);
 
-  // The "Router" - decides which component to show
   return (
     <main className="flex h-screen overflow-hidden bg-slate-50 w-screen">
         {showSidebar && (
@@ -51,22 +73,20 @@ const App: React.FC = () => {
             user={user} 
           />
         )}
-      <div className="flex-1 overflow-y-auto">
-        {/* {currentPage === 'Authorize' && (
-          <AuthorizeDevice onAuthSuccess={handleAuthCompletion} />
-        )} */}
-
-        {currentPage === 'Login' && (
-          <LoginScreen onLoginSuccess={handleAuthCompletion} />
-        )}
-
-        {currentPage === 'Dashboard' && <Dashboard />}
-        {currentPage === 'Inventory' && <Inventory />}
-        {/* {currentPage === 'Sales' && <Sales/>} */}
-        {currentPage === 'Employees' && <Employees/>}
-        {currentPage === 'Settings' && <Settings/>}
-        {currentPage === 'Expenses' && <Expenses/>}
-      </div>
+      <AxiosHttpRequest.Provider value={api}>
+        <div className="flex-1 overflow-y-auto">
+          {currentPage === 'Login' && (
+            <LoginScreen onLoginSuccess={handleAuthCompletion} />
+          )}
+          {currentPage === 'Dashboard' && <Dashboard />}
+          {currentPage === 'Inventory' && <Inventory />}
+          {/* {currentPage === 'Sales' && <Sales/>} */}
+          {currentPage === 'Employees' && <Employees/>}
+          {currentPage === 'Settings' && <Settings/>}
+          {currentPage === 'Expenses' && <Expenses/>}
+          {currentPage === 'Customers' && <Customers/>}
+        </div>
+      </AxiosHttpRequest.Provider>
     </main>
   );
 };

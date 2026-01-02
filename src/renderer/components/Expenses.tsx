@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { 
   Plus, X, DollarSign, Calendar, Tag, AlignLeft, Filter, ArrowUpRight, ArrowDownRight, Trash2, Edit3 
 } from 'lucide-react';
+import { AxiosHttpRequest } from "../../App";
 
 interface Expense {
   id: number;
@@ -18,6 +19,7 @@ function AddExpenseModal({ isOpen, onClose, onSave, expenseToEdit } : {
   isOpen: boolean, onClose: ()=>void, onSave: ()=>void, expenseToEdit: Expense|null
 }) {
   const [loading, setLoading] = useState(false);
+  const api = useContext(AxiosHttpRequest)!
 
   const isEdit = !!expenseToEdit;
 
@@ -27,8 +29,8 @@ function AddExpenseModal({ isOpen, onClose, onSave, expenseToEdit } : {
     const data = Object.fromEntries(formData);
     
     const url = isEdit 
-      ? `http://localhost:3000/api/expenses/${expenseToEdit.id}` 
-      : 'http://localhost:3000/api/expenses';
+      ? `/api/expenses/${expenseToEdit.id}` 
+      : '/api/expenses';
     // Ensure amount is a number
     const payload = {
       ...data,
@@ -37,13 +39,11 @@ function AddExpenseModal({ isOpen, onClose, onSave, expenseToEdit } : {
     };
 
     try {
-      const res = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
+      const res = await api.post(url, {
+        data: payload
       });
 
-      if (res.ok) {
+      if (res.status === 200) {
         onSave();
         onClose();
       }
@@ -161,17 +161,22 @@ export default function  ExpensesManager() {
   const [filterDate, setFilterDate] = useState({ month: new Date().getMonth() + 1, year: new Date().getFullYear() });
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedExpense, setSelectedExpense] = useState(null); // Holds item being edited
+  const api = useContext(AxiosHttpRequest)!
+
+  useEffect(() => {
+    fetchExpenses()
+  }, [filterDate])
 
   const fetchExpenses = async () => {
-    const res = await fetch(`http://localhost:3000/api/expenses?month=${filterDate.month}&year=${filterDate.year}`);
-    const data = await res.json(); // transactionCount is available too
+    const res = await api.get(`/api/expenses?month=${filterDate.month}&year=${filterDate.year}`);
+    const data = await res.data; // transactionCount is available too
     setExpenses(data.expenses);
     setSummary({sales: data.revenue, expensesTotal: data.expensesTotal})
   };
 
   const handleDelete = async (id: number) => {
     if (window.confirm("Are you sure you want to remove this expense record?")) {
-      await fetch(`http://localhost:3000/api/expenses/${id}`, { method: 'DELETE' });
+      await api.delete(`/api/expenses/${id}`);
       fetchExpenses(); // Refresh list
     }
   };
@@ -186,7 +191,8 @@ export default function  ExpensesManager() {
   const isProfitable = profit >= 0;
 
   return (
-    <div className="space-y-6 p-2">
+    <section className="space-y-6 p-4">
+      <h1 className="text-3xl font-bold text-slate-900">Expenses</h1>
       {/* SECTION: Profit/Loss Overview */}
       <div className="grid grid-cols-3 gap-6">
         <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
@@ -239,7 +245,9 @@ export default function  ExpensesManager() {
           </div>
         </div>
         
-        <button className="bg-blue-600 text-white px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 hover:bg-blue-700 transition">
+        <button  onClick={() => setIsModalOpen(true)} 
+          className="cursor-pointer bg-blue-600 text-white px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 hover:bg-blue-700 transition"
+        >
           <Plus size={20} /> Add New Expense
         </button>
       </div>
@@ -267,8 +275,8 @@ export default function  ExpensesManager() {
                 <td className="px-6 py-4 text-right font-black text-red-500">-${exp.amount.toFixed(2)}</td>
                 <td className="px-6 py-4 text-center">
                   <div className="flex justify-center gap-2">
-                    <button className="p-2 text-slate-400 hover:text-blue-600" onClick={() => openEditModal(exp)}><Edit3 size={16}/></button>
-                    <button className="p-2 text-slate-400 hover:text-red-600" onClick={() => handleDelete(exp.id)}><Trash2 size={16}/></button>
+                    <button className="cursor-pointer p-2 text-slate-400 hover:text-blue-600" onClick={() => openEditModal(exp)}><Edit3 size={16}/></button>
+                    <button className="cursor-pointer p-2 text-slate-400 hover:text-red-600" onClick={() => handleDelete(exp.id)}><Trash2 size={16}/></button>
                   </div>
                 </td>
               </tr>
@@ -286,6 +294,6 @@ export default function  ExpensesManager() {
         }} 
         onSave={fetchExpenses} 
       />
-    </div>
+    </section>
   );
 };

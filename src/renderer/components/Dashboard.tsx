@@ -1,10 +1,23 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useContext } from 'react';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
-  LineChart, Line, Cell 
+  LineChart, Line 
 } from 'recharts';
 import { Users, Package, DollarSign, AlertTriangle, ArrowUpRight, ArrowDownRight } from 'lucide-react';
-
+import { AxiosHttpRequest } from "../../App"
+/*export type Sale = {
+  id: number;
+  total: number;
+  tax: number;
+  totalAfterTax: number;
+  method        String
+  employeeName  String
+  createdAt     DateTime      @default(now())
+  customerId    Int?
+  ProductSold   ProductSold[]
+  Customer      Customer?     @relation(fields: [customerId], references: [id])
+}
+*/
 
 const DashboardLoading = () => {
   return (
@@ -67,25 +80,73 @@ interface TopSellingProduct {
   sales: number
 }
 
+function CurrentTimeStamp() {
+  const [currTimeStamp, setCurrTimeStamp] = useState(formatCurrentTimestamp())
+  const clockStarted = useRef(false)
+  useEffect(() => {
+    if (!clockStarted.current)
+      setInterval(()=>setCurrTimeStamp(formatCurrentTimestamp()), 1000)
+    clockStarted.current = true
+  }, [])
+  return (
+    <div className="text-sm font-medium text-slate-500 bg-white px-4 py-2 rounded-lg shadow-sm border border-slate-200">
+      {currTimeStamp}
+    </div>
+  )
+}
+
+function formatCurrentTimestamp(){
+  const date = new Date();
+  const options = {
+    month: 'short',
+    day: '2-digit',
+    year: 'numeric',
+  } as const;
+
+  const timeOptions = {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: true,
+  } as const;
+
+  const datePart = date.toLocaleDateString('en-US', options);
+  const timePart = date.toLocaleTimeString('en-US', timeOptions);
+
+  return `${datePart} • ${timePart}`;
+};
+
+
+function getPercentChange(val1: number, val2: number) {
+  if (val1 === 0) {
+    if (val2 > 0)
+      return "+100%"
+    else 
+      return "+0%"
+  }else {
+    return ((val2 - val1)/val1).toFixed(2)
+  }
+}
+
 export default function Dashboard () {
   const [revenueTrendData, setRevenueTrendData] = useState<RevenueTrend[]>([])
   const [topSellingData, setTopSellingData] = useState<TopSellingProduct[]>([])
-  const [stats, setStats] = useState({todayRevenue:  0, totalInventory: 0, lowStockCount: 0, registeredCustomers: 0})
+  const [stats, setStats] = useState({todayRevenue:  0, totalInventory: 0, lowStockCount: 0, customerCount: 0, yesterdayRevenue: 0, monthRevenue: 0})
   const [loading, setLoading] = useState(true);
+  const api = useContext(AxiosHttpRequest)!
 
   useEffect(() => {
     // Fetch all 3 endpoints in parallel
     Promise.all([
-      fetch('http://localhost:3000/api/analytics/top-products'),
-      fetch('http://localhost:3000/api/analytics/revenue-trend'),
-      fetch('http://localhost:3000/api/business-stats'),
-      fetch('http://localhost:3000/api/sales/history?limit=5'),
+      api.get('/api/business-analytics/top-products'),
+      api.get('/api/business-analytics/revenue-trend'),
+      api.get('/api/business-analytics/quick-stats'),
+      // api.get('/api/sales?limit=5'),
     ])
-    .then(async ([res1, res2, res3, res4]) => {
-      const topProducts = await res1.json();
-      const revenueTrend = await res2.json();
-      const bizStats = await res3.json();
-      const recentSales = await res4.json();
+    .then(async ([res1, res2, res3]) => {
+      const topProducts = await res1.data;
+      const revenueTrend = await res2.data;
+      const bizStats = await res3.data;
+      // const recentSales = await res4.data;
       setRevenueTrendData(revenueTrend)
       setTopSellingData(topProducts)
       setStats(bizStats)
@@ -101,37 +162,35 @@ export default function Dashboard () {
       <header className="flex justify-between items-center mb-8">
         <div>
           <h1 className="text-4xl font-bold text-slate-800">Business Overview</h1>
-          <p className="text-slate-500">Welcome back, Admin. Here is what's happening today.</p>
+          <p className="text-slate-500">Welcome back! Here is what's happening today.</p>
         </div>
-        <div className="text-sm font-medium text-slate-500 bg-white px-4 py-2 rounded-lg shadow-sm border border-slate-200">
-          Dec 24, 2025 • 11:00 PM
-        </div>
+        <CurrentTimeStamp/>
       </header>
 
       {/* 4 KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         <StatCard 
           title="Registered Customers" 
-          value={stats.registeredCustomers} 
+          value={stats.customerCount} 
           icon={<Users size={20} />} 
-          trend="+12% from last month"
+          trend=""
           trendUp={true}
-        />
+        /> {/*+12% from last month*/}
         <StatCard 
           title="Inventory Items" 
           value={stats.totalInventory} 
           icon={<Package size={20} />} 
-          trend="8 new added today"
+          trend="" 
           trendUp={true}
-        />
+        />{/*8 new added today*/}
         <StatCard 
           title="Today's Revenue" 
           value={stats.todayRevenue} 
           icon={<DollarSign size={20} />} 
-          subtext="Month: $82,400"
-          trend="+5.4% vs yesterday"
+          subtext={`Month: $${stats.monthRevenue}`}
+          trend={getPercentChange(stats.yesterdayRevenue, stats.todayRevenue)}
           trendUp={true}
-        />
+        />{/* +5.4% vs yesterday Month: $82,400"*/}
         <StatCard 
           title="Low Stock Alert" 
           value={stats.lowStockCount} 
@@ -190,7 +249,7 @@ export default function Dashboard () {
           <h3 className="text-lg font-semibold text-slate-800">Recent Sales Today</h3>
           <button className="text-blue-600 text-sm font-medium hover:underline">View All Sales</button>
         </div>
-        <div className="overflow-x-auto">
+        {/*<div className="overflow-x-auto">
           <table className="w-full text-left">
             <thead className="bg-slate-50 text-slate-500 text-xs uppercase font-semibold">
               <tr>
@@ -206,7 +265,8 @@ export default function Dashboard () {
               <RecentSalesRow id="#9919" name="Mark Thompson" amount="$112.99" status="Success" />
             </tbody>
           </table>
-        </div>
+        </div>*/}
+        <p className="text-center font-italic bg-slate-100 p-4">No Sales have been made today!</p>
       </div>
     </div>
   );

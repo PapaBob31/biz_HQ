@@ -1,15 +1,8 @@
 
-import React, { useState, useEffect } from 'react';
-import { UserPlus, Shield, Mail, Key, Trash2, Edit2,Loader2, AlertCircle, RefreshCw } from 'lucide-react';
-
-
-interface Employee {
-  id: number;
-  username: string,
-  role: string,
-  password: string,
-  email: string
-}
+import React, { useState, useEffect, useContext } from 'react';
+import { UserPlus, Shield, Mail, Key, AlertTriangle, Trash2, Edit2,Loader2, AlertCircle, RefreshCw, X } from 'lucide-react';
+import type { Employee } from '../../../prisma/generated/client';
+import { AxiosHttpRequest } from '../../App';
 
 function ErrorInterface({fetchEmployees} : {fetchEmployees: () => void}) {
   return (
@@ -51,21 +44,109 @@ function EmptyStaffInterface() {
   )
 }
 
+function ErrorModal({ error, closeModal } : {error: string, closeModal: ()=>void}) {
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 text-center">
+      <div className="bg-white p-8 rounded-xl w-96 shadow-xl">
+        <div className="flex justify-end">
+          <button onClick={closeModal} className="cursor-pointer hover:bg-slate-200 rounded-full p-2">
+            <X size={18}/>
+          </button>
+        </div>
+        <div className="p-4 rounded-full bg-red-50 text-red-600 my-4 mx-auto w-fit">
+          <AlertTriangle size={50}/>
+        </div>
+        <h2 className="text-xl font-bold text-slate-800">Error!</h2>
+        <p className="text-slate-500 max-w-xs mt-2 mb-6">
+          {error}
+        </p>
+      </div>
+    </div>
+  )
+}
+
+
+function EmployeeEditModal(
+  {employee, closeModal, updateEmployeeDisplay, displayError} : 
+  {employee: Employee, closeModal: () => void, updateEmployeeDisplay: (emp: Employee) => void, displayError: (arg: string)=>void}
+) {
+  const api = useContext(AxiosHttpRequest)!
+  function sendEmployeEditRequest(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget);
+    const payload = Object.fromEntries(formData);
+    
+    api.put(`/api/employees/${employee.id}`, {
+      data: payload
+    })
+    .then(response => {
+      updateEmployeeDisplay(response.data)
+      closeModal();
+    })
+    .catch(err => {
+      console.log(err)
+      displayError("Something went wrong while modifying Inventory")
+    })
+
+  }
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+      <div className="bg-white p-8 rounded-xl w-120 shadow-xl">
+        <h2 className="text-xl font-bold mb-4">Edit Employee Details</h2>
+        <form onSubmit={sendEmployeEditRequest} className="space-y-4">
+          <input 
+            placeholder="User Name" 
+            className="w-full p-2 border rounded border border-slate-300 focus:ring-2 focus:ring-blue-500 outline-none"
+            defaultValue={employee.username}
+            required
+          />
+          <input 
+            placeholder="Email" type="email"
+            className="w-full p-2 border rounded border border-slate-300 focus:ring-2 focus:ring-blue-500 outline-none"
+            defaultValue={employee.email}
+            required
+          />
+          <select 
+            className="w-full p-2 border rounded bg-white"
+          >
+            <option value="Cashier" selected={employee.role === "CASHIER"}>Cashier</option>
+            <option value="Manager" selected={employee.role === "MANAGER"}>Manager</option>
+            <option value="Admin" selected={employee.role === "ADMIN"}>Admin</option>
+            <option value="Other" selected={employee.role === "OTHER"}>Other</option>
+          </select>
+          <input 
+            placeholder="New Password" type="password"
+            className="w-full p-2 border rounded border border-slate-300 focus:ring-2 focus:ring-blue-500 outline-none"
+            defaultValue=""
+            required
+          />
+          <div className="flex gap-2">
+            <button type="button" onClick={closeModal} className="cursor-pointer flex-1 py-2 bg-slate-200 rounded-md">Cancel</button>
+            <button type="submit" className="cursor-pointer flex-1 py-2 bg-blue-600 text-white rounded-md cursor-pointer">Update Details</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  )
+}
+
 
 
 export default function Employees() {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [newStaff, setNewStaff] = useState({ username: '', role: 'Cashier', password: '', email: '' });
+  const [employeeToEdit, setEmployeeToEdit] = useState<Employee|null>(null)
   const [modalOpen, setModalOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false)
+  const [errorModal, setErrorModal] = useState({opened: false, content: ''})
+  const api = useContext(AxiosHttpRequest)!
 
   async function fetchEmployees(){
     setLoading(true);
     try {
-      const response = await fetch('http://localhost:3000/api/employees');
-      const data = await response.json();
-      setEmployees(data);
+      const response = await api.get('/api/employees');
+      setEmployees(response.data);
     } catch (error) {
       console.error("Error loading employees:", error);
       setError(true)
@@ -78,18 +159,31 @@ export default function Employees() {
     fetchEmployees();
   }, []);
 
+  function displayEmployeeEditForm(employee: Employee) {
+    setEmployeeToEdit(employee)
+    setModalOpen(true)
+  }
+  function updateEmployeeCard(updatedData: Employee) {
+    const employeesList = [...employees]
+    const targetEmployeeIndex = employeesList.findIndex(employee => employee.id === updatedData.id)
+    if (targetEmployeeIndex > -1) {
+      employeesList[targetEmployeeIndex] = updatedData;
+      setEmployees(employeesList)
+    }else {
+      setErrorModal({opened: true, content: 'Employee to be deleted could not be found!'})
+    }
+  }
+
   async function handleEmployeeCreation(e: React.FormEvent) {
     e.preventDefault();
     
     try {
-      const response = await fetch('http://localhost:3000/api/employees', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({employeeData: newStaff, requesterRole: 'Admin'})
+      const response = await api.post('/api/employees', {
+        data: {employeeData: newStaff}
       });
 
-      if (response.ok) {
-        const savedEmployee = await response.json();
+      if (response.status === 200) {
+        const savedEmployee = await response.data;
         setEmployees([...employees, savedEmployee]); // Update local state
         setModalOpen(false); // Close modal
         setNewStaff({ username: '', role: 'Cashier', password: '', email: '' }); // Reset
@@ -99,10 +193,34 @@ export default function Employees() {
     }
   };
 
+  async function deleteEmployee(employeeId: number) {
+    console.log(employeeId)
+    // also make sure currently logged in user can't delete himself
+    const employeeToDelete = employees.find(employee => employee.id === employeeId)
+    if (employeeToDelete!.role === 'ADMIN' && employees.length === 1 ){
+      setErrorModal({content: "The only admin account can't be deleted!", opened: true})
+      console.log("Why?")
+      return
+    }else {
+      api.delete(`/api/employees/${employeeId}`)
+      .then(response => {
+        if (response.status === 200) {
+          setEmployees(employees.filter(employee => employee.id !== employeeToDelete!.id))
+        }else {
+          setErrorModal({content: "An Error Occured while trying to delete User! Plese try again.", opened: true})
+        }
+      })
+      .catch((error) => {
+        setErrorModal({content: "An Error Occured while trying to delete User! Plese try again.", opened: true})
+        console.error("Failed to save employee", error);
+      })
+    }
+  }
+
   const getRoleColor = (role: string) => {
     switch(role) {
-      case 'Admin': return 'bg-purple-100 text-purple-700 border-purple-200';
-      case 'Manager': return 'bg-blue-100 text-blue-700 border-blue-200';
+      case 'ADMIN': return 'bg-purple-100 text-purple-700 border-purple-200';
+      case 'MANAGER': return 'bg-blue-100 text-blue-700 border-blue-200';
       default: return 'bg-slate-100 text-slate-700 border-slate-200';
     }
   };
@@ -122,7 +240,7 @@ export default function Employees() {
           <p className="text-slate-500 text-sm">Control access levels and system permissions</p>
         </div>
         <button onClick={() => setModalOpen(true)}
-          className="flex items-center gap-2 bg-blue-600 text-white px-5 py-2.5 rounded-xl hover:bg-blue-700 transition shadow-lg shadow-blue-200">
+          className="cursor-pointer flex items-center gap-2 bg-blue-600 text-white px-5 py-2.5 rounded-xl hover:bg-blue-700 transition shadow-lg shadow-blue-200">
           <UserPlus size={18} /> Add Employee
         </button>
       </div>
@@ -144,20 +262,21 @@ export default function Employees() {
             <div className="mt-4 space-y-2 text-sm text-slate-600">
               <div className="flex items-center gap-2">
                 <Mail size={14} className="text-slate-400" />
-                {emp.email}
+                {emp.email ? emp.email : <span className="rounded-lg p-1 bg-slate-100 text-xs">No Email Available</span>}
               </div>
-              <div className="flex items-center gap-2">
+              {/* <div className="flex items-center gap-2">
                 <Key size={14} className="text-slate-400" />
                 PASSWORD: <span className="font-mono font-bold text-slate-800">****</span>
-              </div>
+              </div> */}
             </div>
 
             <div className="mt-6 pt-4 border-t border-slate-50 flex justify-end gap-3 transition-opacity">
-              <button className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg">
+              <button className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg cursor-pointer"
+                onClick={() => displayEmployeeEditForm(emp)}>
                 <Edit2 size={16} />
               </button>
-              <button className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg">
-                <Trash2 size={16} />
+              <button className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg cursor-pointer" onClick={()=>deleteEmployee(emp.id)}>
+                <Trash2 size={16}/>
               </button>
             </div>
           </div>
@@ -165,7 +284,7 @@ export default function Employees() {
       </div>
 
       {/* Basic Modal Placeholder */}
-      {modalOpen && (
+      {modalOpen && !employeeToEdit && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white p-8 rounded-xl w-96 shadow-xl">
             <h2 className="text-xl font-bold mb-4">Create New Staff</h2>
@@ -189,6 +308,7 @@ export default function Employees() {
                 <option value="Cashier">Cashier</option>
                 <option value="Manager">Manager</option>
                 <option value="Admin">Admin</option>
+                <option value="Other">Other</option>
               </select>
               <input 
                 placeholder="Initial Password" type="password"
@@ -197,13 +317,18 @@ export default function Employees() {
                 required
               />
               <div className="flex gap-2">
-                <button type="button" onClick={() => setModalOpen(false)} className="flex-1 py-2 bg-slate-200 rounded">Cancel</button>
-                <button type="submit" className="flex-1 py-2 bg-blue-600 text-white rounded">Save Staff</button>
+                <button type="button" onClick={() => setModalOpen(false)} className="cursor-pointer flex-1 py-2 bg-slate-200 rounded-md">Cancel</button>
+                <button type="submit" className="cursor-pointer flex-1 py-2 bg-blue-600 text-white rounded-md cursor-pointer">Save Staff</button>
               </div>
             </form>
           </div>
-        </div>
+        </div>       
       )}
+      {modalOpen && employeeToEdit && (
+        <EmployeeEditModal employee={employeeToEdit} closeModal={()=>{setModalOpen(false), setEmployeeToEdit(null)}} 
+        updateEmployeeDisplay={updateEmployeeCard} displayError={(arg: string) => setErrorModal({opened: true, content: arg})}/>
+        )}
+      {errorModal.opened && <ErrorModal error={errorModal.content} closeModal={()=>setErrorModal({content: '', opened: false})}/>}
     </div>
   );
 };
