@@ -6,6 +6,7 @@ import { addProductReqHandler, getProductsReqHandler, updateProductReqHandler, d
 import { distributorsReqHandler, distributorProductsReqHandler, newDistributorReqHandler, updateDistributorReqHandler, 
 	deleteDistributorReqHandler } from "../controllers/distributors"
 import { quickStatsReqHandler, topProductsReqHandler, revenueTrendReqHandler, businessSummaryReqHandler } from "../controllers/analytics"
+import { newSalesCheckout } from "../controllers/sales"
 
 export const router = Router()
 
@@ -39,3 +40,5 @@ router.get('/api/business-analytics/quick-stats', quickStatsReqHandler)
 router.get('/api/business-analytics/top-products', topProductsReqHandler)
 router.get('/api/business-analytics/revenue-trend', revenueTrendReqHandler)
 router.get('/api/business-analytics/business-summary', businessSummaryReqHandler)
+
+router.post('api/sales', newSalesCheckout)

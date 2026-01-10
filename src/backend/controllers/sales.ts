@@ -1,21 +1,6 @@
 import type { Response, Request }  from "express";
 import prisma from "./db"
 
-// POST '/api/sales'
-export async function createNewSaleReqHandler(req: Request, res: Response) {
-  const { total, method, employeeName, totalAfterTax, tax } = req.body;
-  
-  if (method === 'CLOVER') {
-	// Clover Flex Simulation
-	console.log("Triggering Clover Cloud Pay Display...");
-  }
-
-
-  const sale = await prisma.sale.create({
-	data: { total, method, employeeName, totalAfterTax, tax }
-  });
-  res.json(sale);
-};
 
 // 	GET '/api/sales'
 export async function salesReqHandler(req: Request, res: Response) {
@@ -85,3 +70,4 @@ export async function newSalesCheckout(req: Request, res: Response) {
 	res.status(500).json({ error: "Checkout failed: " + error.message });
   }
 };
+

@@ -1,13 +1,16 @@
-import { app, BrowserWindow, ipcMain } from 'electron';
+import { app, BrowserWindow, ipcMain, safeStorage } from 'electron';
 import path from 'node:path'
 import { fileURLToPath } from 'url';
-import { PrismaClient, type Employee } from '../prisma/generated/client'
+import { PrismaClient } from '../prisma/generated/client'
 import bcrypt from 'bcryptjs';
 import fs from 'fs';
 import { PrismaPg } from '@prisma/adapter-pg'
 import server from "./backend"
+import cloverAuthServer from "./backend/clover-auth-server"
 import { generateAccessToken } from "./backend/middlewares"
 import "dotenv/config";
+import Store from 'electron-store'
+import crypto from 'node:crypto'; // For generating UUIDs
 
 console.log(process.env.DATABASE_URL)
 const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL })
@@ -41,15 +44,62 @@ function createWindow() {
 }
 
 
+const store = new Store({ name: 'clover-vault' });
+
+export function encryptAndStoreTokens(tokens: {access_token: string; refresh_token: string, merchant_id: string}) {
+  if (!safeStorage.isEncryptionAvailable()) return false;
+
+  const encryptedAccess = safeStorage.encryptString(tokens.access_token);
+  const encryptedRefresh = safeStorage.encryptString(tokens.refresh_token);
+
+  store.set('clover_access', encryptedAccess.toString('hex'));
+  store.set('clover_refresh', encryptedRefresh.toString('hex'));
+  store.set('merchant_id', tokens.merchant_id);
+  return true;
+}
+
+export function getDecryptedAccessToken() {
+  const hex = store.get('clover_access');
+  if (!hex) return null;
+  return safeStorage.decryptString(Buffer.from(hex, 'hex'));
+}
+
 
 server.listen(3000)
+cloverAuthServer.listen(4999, () => console.log('Auth Bridge running on port 4999'));
 
-// const printer = require('pdf-to-printer'); // Common library for Windows Electron apps
 
-// 1. Get List of System Printers
-// ipcMain.handle('get-printers', async () => {
-//   return await printer.getPrinters();
-// });
+ipcMain.handle('trigger-clover-payment', async (event, { amount, orderId }) => {
+  const token = getDecryptedAccessToken();
+  const merchantId = store.get('merchant_id');
+  const deviceId = store.get('clover_device_id');
+  const appId = 'YOUR_APP_ID_HERE'; // The non-editable ID you mentioned earlier
+
+  // Rest Pay Display Endpoint (Cloud)
+  const url = `https://apisandbox.dev.clover.com/connect/v1/payments`;
+
+  try {
+    const response = await axios.post(url, {
+      amount: amount,          // in cents
+      externalPaymentId: orderId,
+      final: true,             // Tells Clover to finalize the sale immediately
+    }, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'X-Clover-Device-Id': deviceId,
+        'X-POS-Id': appId,
+        'Idempotency-Key': crypto.randomUUID(), // Unique for every single request
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      }
+    });
+
+    return { success: true, data: response.data };
+  } catch (err) {
+    // If it's a 401, you should trigger your token refresh logic here
+    return { success: false, error: err.response?.data?.message || err.message };
+  }
+});
 
 ipcMain.handle('generate-pdf-report', async (event) => {
   const printWindow = new BrowserWindow({ show: false });
@@ -103,12 +153,13 @@ ipcMain.handle('user-login', async (event, { username, password, role }) => {
     const user = await prisma.employee.findUnique({
       where: { username }
     });
-
+    console.log(user)
     if (!user) return { success: false, message: "User not found" };
 
     const {password: hashedPassword, ...clearUserData} = user
 
     const isMatch = await bcrypt.compare(password, hashedPassword);
+    console.log(isMatch)
 
     if (isMatch && clearUserData.role === role.toUpperCase()) {
       const accessToken = generateAccessToken(clearUserData)

@@ -1,0 +1,91 @@
+// import type { Sale } from '../../../../prisma/generated/client';
+// utils/printer.ts
+export async function printReceipt (printerIp: string, sale: any) {
+  const storeName = "MY AWESOME RETAIL STORE";
+  const storeAddress = "123 Tech Lane, Silicon Valley";
+  const storePhone = "(555) 123-4567";
+  
+  const dateStr = new Date(sale.createdAt).toLocaleString();
+
+  // Generate Item Lines
+  const itemLines = sale.items.map(item => 
+    `<text>${item.name.padEnd(20)} x${item.quantity}  $${(item.price * item.quantity).toFixed(2)}\n</text>`
+  ).join('');
+
+  const xml = `
+    <root>
+      <alignment position="center" />
+      <text font="emphasized" width="2" height="2">${storeName}\n</text>
+      <text>${storeAddress}\n</text>
+      <text>${storePhone}\n\n</text>
+      
+      <alignment position="left" />
+      <text>Date: ${dateStr}\n</text>
+      <text>Order ID: #000${sale.id}\n</text>
+      <text>Cashier: ${sale.employeeName}\n</text>
+      <text>--------------------------------\n</text>
+      
+      ${itemLines}
+      
+      <text>--------------------------------\n</text>
+      <alignment position="right" />
+      <text>Subtotal: $${sale.total.toFixed(2)}\n</text>
+      <text>Tax (7.5%): $${sale.tax.toFixed(2)}\n</text>
+      <text font="emphasized" width="1" height="2">TOTAL: $${sale.totalAfterTax.toFixed(2)}\n</text>
+      
+      <alignment position="center" />
+      <text>\nThank you for shopping!\n</text>
+      <text>Please keep your receipt for returns.\n\n</text>
+      
+      <cut type="partial" />
+    </root>
+  `;
+
+  return fetch(`http://${printerIp}/StarWebPRNT/SendMessage`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/xml' },
+    body: xml
+  });
+};
+
+export async function kickCashDrawer(printerIp: string) {
+  const xml = `
+    <root>
+      <peripheral channel="1" ontime="200" offtime="200" />
+    </root>
+  `;
+  try {
+    await fetch(`http://${printerIp}/StarWebPRNT/SendMessage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/xml' },
+      body: xml
+    });
+  } catch (e) {
+    console.error("Hardware Error: Could not reach printer for drawer kick.");
+  }
+};
+
+// utils/hardwareManager.ts
+
+/**
+ * Pings the printer to check if it's reachable and returns its current status.
+ */
+export const checkPrinterStatus = async (ip: string) => {
+  if (!ip) return { online: false, message: "No IP provided" };
+
+  try {
+    // StarWebPRNT expects a POST to this specific endpoint
+    const response = await fetch(`http://${ip}/StarWebPRNT/SendMessage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/xml' },
+      body: '<root></root>' // An empty root often triggers a status response
+    });
+
+    if (response.ok) {
+      return { online: true, message: "Printer Online" };
+    }
+    return { online: false, message: `Error: ${response.status}` };
+  } catch (error) {
+    return { online: false, message: "Printer Offline / Network Error" };
+  }
+};

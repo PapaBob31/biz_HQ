@@ -3,7 +3,7 @@ import LoginScreen from './renderer/components/LoginScreen';
 import Dashboard from './renderer/components/Dashboard';
 import Inventory from './renderer/components/Inventory';
 import SideBar from './renderer/components/SideBar';
-// import Sales from './renderer/components/Sales';
+import Sales from './renderer/components/Sales';
 import Expenses from './renderer/components/Expenses';
 import Settings from './renderer/components/Settings';
 import Employees from "./renderer/components/Employees"
@@ -80,7 +80,7 @@ const App: React.FC = () => {
           )}
           {currentPage === 'Dashboard' && <Dashboard />}
           {currentPage === 'Inventory' && <Inventory />}
-          {/* {currentPage === 'Sales' && <Sales/>} */}
+          {currentPage === 'Sales' && <Sales/>}
           {currentPage === 'Employees' && <Employees/>}
           {currentPage === 'Settings' && <Settings/>}
           {currentPage === 'Expenses' && <Expenses/>}

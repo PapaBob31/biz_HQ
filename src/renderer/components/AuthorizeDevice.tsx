@@ -113,4 +113,4 @@ const AuthorizeDevice: React.FC<AuthProps> = ({ onAuthSuccess }) => {
   );
 };
 
-export default AuthorizeDevice; // ${loading ? 'bg-slate-400' : 'bg-blue-600 hover:bg-blue-700 shadow-md'}
+export default AuthorizeDevice;

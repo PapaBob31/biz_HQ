@@ -1,11 +1,8 @@
 export type User = {
+  id: string,
   username: string;
-  role: 'Admin' | 'Manager' | 'Cashier' | 'Other'
+  email: string;
+  role: 'ADMIN' | 'MANAGER' | 'CASHIER' | 'OTHER'
 };
 
-export interface AuthResponse {
-  success: boolean;
-  user: User;
-  username: string;
-  error?: string;
-}
+
