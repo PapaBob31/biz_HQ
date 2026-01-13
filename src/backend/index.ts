@@ -3,7 +3,9 @@ import { router } from "./routes/index.js"
 import express from "express";
 
 function logger(req: Request, _res: Response, next: ()=>void){
-	console.log((new Date()).toDateString(), req.method, req.path)
+	if (process.env.ENVIRONMENT && process.env.ENVIRONMENT !== "test") {
+		console.log((new Date()).toDateString(), req.method, req.path)
+	}
 	next()
 }
 

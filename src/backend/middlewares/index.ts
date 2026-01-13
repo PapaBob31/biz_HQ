@@ -1,48 +1,37 @@
 import type {Response, Request} from "express";
 import jwt from "jsonwebtoken"
 import "dotenv/config";
-
-interface NonSensitiveUserData {
-	id: number,
-	role: string,
-	username: string,
-	email: string,
-}
+import { generateAccessToken, type NonSensitiveUserData } from "../utils";
 
 export interface ModRequest extends Request {
 	user: NonSensitiveUserData;
 }
 
-
 const privateKey = process.env.PRIVATE_KEY as string
 
-export function generateAccessToken(userDetails: NonSensitiveUserData) {
-  return jwt.sign(userDetails, privateKey, { expiresIn: '4hours' });
-}
-
 export async function smartRefreshMiddleware(req: ModRequest, res: Response, next: ()=>void) {
-  const authHeader = req.headers.authorization;
-  if (!authHeader) return next()
+	const authHeader = req.headers.authorization;
+	if (!authHeader) return next()
 
-  const token = authHeader.split(' ')[1];
+	const token = authHeader.split(' ')[1];
 
-  try {
-    const decoded = jwt.verify(token, privateKey) as any;
-    
-    const currentTime = Math.floor(Date.now() / 1000);
-    const oneHourInSeconds = 3600;
+	try {
+		const decoded = jwt.verify(token, privateKey) as any;
+		
+		const currentTime = Math.floor(Date.now() / 1000);
+		const oneHourInSeconds = 3600;
 
-    // Check if we are in the "Grace Period" (last hour of validity)
-    if (decoded.exp - currentTime < oneHourInSeconds) {
-      const newToken = generateAccessToken({id: decoded.id, role: decoded.role, username: decoded.username, email: decoded.email})
-      res.setHeader('X-New-Access-Token', newToken);
-    }
+		// Check if we are in the "Grace Period" (last hour of validity)
+		if (decoded.exp - currentTime < oneHourInSeconds) {
+			const newToken = generateAccessToken({id: decoded.id, role: decoded.role, username: decoded.username, email: decoded.email})
+			res.setHeader('X-New-Access-Token', newToken);
+		}
 
-    req.user = decoded;
-    next();
-  } catch (err) {
-    res.status(401).send("Session Expired");
-  }
+		req.user = decoded;
+		next();
+	} catch (err) {
+		res.status(401).send("Session Expired");
+	}
 };
 
 
@@ -58,24 +47,29 @@ export async function setCorsHeaders(req: Request, res: Response, next: ()=>any)
 }
 
 export async function authenticateRequest(req: ModRequest, res: Response, next: ()=> any) {
-	/*const excludedEndpoints = ["/login", "/signup", "/new-event"];
-	if (excludedEndpoints.includes(req.originalUrl)) {
+	const authFreeEndPoints  = ["/api/employees/verify-otp","/api/employees/login", "/api/employees/new-otp" ]
+	if (authFreeEndPoints.includes(req.originalUrl)){
 		next()
 		return; // implement logic such that only some roles can access some endpoints
-	}*/
-	console.log()
+	}
+
+	if (req.originalUrl === "/api/employees/admin" && req.method === "POST"){
+		next();
+		return;
+	}
+
 	let accessToken = ""
 	const authorizationHeaderVal = req.headers["authorization"]
 	if (authorizationHeaderVal){
 		const components = authorizationHeaderVal.split(" ")
 		if (components.length !== 2) {
-			res.status(401).json({ errorMsg: 'Unauthorized Request!', msg: null, data: null});
+			res.status(401).json({ message: 'Unauthorized Request!', msg: null, success: false});
 			return;
 		}else {
 			accessToken = components[1]
 		}
 	}else {
-		res.status(401).json({ errorMsg: 'Unauthorized Request!', msg: null, data: null});
+		res.status(401).json({ message: 'Unauthorized Request!', msg: null, success: false});
 		return;
 	}
 
@@ -86,8 +80,8 @@ export async function authenticateRequest(req: ModRequest, res: Response, next: 
 	    next()
 	} catch (err) {
 	    if (err.name === 'TokenExpiredError') {
-	      return res.status(401).json({ errorMsg: 'Token expired', msg: null, data: null });
+	      return res.status(401).json({ message: 'Token expired', msg: null, success: false });
 	    }
-	    return res.status(403).json({ errorMsg: 'Invalid token', msg: null, data: null });
+	    return res.status(401).json({ message: 'Invalid token', msg: null, success: false });
   }
 }
