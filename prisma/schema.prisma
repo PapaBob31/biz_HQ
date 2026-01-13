@@ -32,10 +32,12 @@ model Distributor {
 model Employee {
   id       Int        @id @default(autoincrement())
   username String     @unique
-  email    String
+  email    String     @unique
   password String
   role     String
   LoginLog LoginLog[]
+  otp_and_expirationts String?
+  verified Boolean
 }
 
 model Expense {
