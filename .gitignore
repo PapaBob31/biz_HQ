@@ -24,9 +24,10 @@ dist-electron
 *.sln
 *.sw?
 
-/src/generated/prisma\
+/prisma/generated
 
 .env
+.env.test
 
 /generated/prisma
 
