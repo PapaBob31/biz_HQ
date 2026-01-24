@@ -89,14 +89,29 @@ model ProductSold {
 }
 
 model Sale {
-  id            Int           @id @default(autoincrement())
-  total         Float
-  tax           Float
-  totalAfterTax Float
-  method        String
-  employeeName  String
-  createdAt     DateTime      @default(now())
-  customerId    Int?
-  ProductSold   ProductSold[]
-  Customer      Customer?     @relation(fields: [customerId], references: [id])
+  id               Int           @id @default(autoincrement())
+  subTotal         Float
+  tax              Float
+  total            Float
+  loyaltyDiscount  Float
+  method           String
+  employeeName     String
+  createdAt        DateTime      @default(now())
+  customerId       Int?
+  ProductSold      ProductSold[]
+  Customer         Customer?     @relation(fields: [customerId], references: [id])
+}
+
+model BusinessDetails  {
+  id                OnlyValidId      @unique
+  storeName         String           @default("Biz HQ")
+  taxRate           Float            @default(13)
+  lowStockValue     Int              @default(10)
+  cloverAppId       String?
+  cloverMerchantId  String?
+  starPrinterIP     String?
+}
+
+enum OnlyValidId {
+  one
 }
