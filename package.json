@@ -1,4 +1,6 @@
 {
+  "author": "devdam",
+  "description": "Business Management Software",
   "name": "biz_hq_1",
   "private": true,
   "version": "0.0.0",
@@ -8,7 +10,11 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "test": "dotenvx run -f .env.test -- vitest"
+    "test": "dotenvx run -f .env.test -- vitest",
+    "clean-start": "npm run build && electron-forge start",
+    "start": "electron-forge start",
+    "package": "electron-forge package",
+    "make": "npm run build && electron-forge make"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.2.0",
@@ -20,33 +26,47 @@
     "better-sqlite3": "^12.5.0",
     "cors": "^2.8.5",
     "dotenv": "^17.2.3",
+    "electron-squirrel-startup": "^1.0.1",
     "electron-store": "^11.0.2",
     "express": "^5.2.1",
     "jsonwebtoken": "^9.0.3",
     "lucide-react": "^0.562.0",
     "nanoid": "^5.1.6",
+    "node-gyp": "^12.1.0",
+    "nodemailer": "^7.0.12",
     "pg": "^8.16.3",
-    "pg-native": "^3.5.2",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-hook-form": "^7.69.0",
     "recharts": "^3.6.0",
-    "resend": "^6.7.0"
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
+    "@electron-forge/cli": "^7.11.1",
+    "@electron-forge/maker-deb": "^7.11.1",
+    "@electron-forge/maker-rpm": "^7.11.1",
+    "@electron-forge/maker-squirrel": "^7.11.1",
+    "@electron-forge/maker-zip": "^7.11.1",
+    "@electron-forge/plugin-auto-unpack-natives": "^7.11.1",
+    "@electron-forge/plugin-fuses": "^7.11.1",
+    "@electron-forge/plugin-vite": "^7.11.1",
+    "@electron-forge/publisher-nucleus": "^7.11.1",
+    "@electron/fuses": "^1.8.0",
     "@eslint/js": "^9.39.1",
     "@tailwindcss/vite": "^4.1.18",
     "@types/bcryptjs": "^2.4.6",
+    "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^24.10.4",
+    "@types/nodemailer": "^7.0.5",
     "@types/pg": "^8.16.0",
     "@types/react": "^19.2.5",
     "@types/react-dom": "^19.2.3",
-    "@vitejs/plugin-react": "^5.1.1",
+    "@types/xlsx": "^0.0.35",
+    "@vitejs/plugin-react": "^5.1.2",
     "concurrently": "^9.2.1",
-    "electron": "^39.2.7",
-    "electron-builder": "^26.0.12",
+    "electron": "^40.0.0",
     "eslint": "^9.39.1",
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.4.24",
@@ -62,5 +82,8 @@
     "vite-plugin-electron-renderer": "^0.14.6",
     "vitest": "^4.0.16",
     "wait-on": "^9.0.3"
+  },
+  "build": {
+    "appId": "com.devdam.biz_hq"
   }
 }

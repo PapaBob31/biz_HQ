@@ -1,5 +1,5 @@
-import React, { useState, createContext  } from 'react';
-import LoginScreen from './renderer/components/LoginScreen';
+import React, { useState, createContext, useEffect  } from 'react';
+import AuthScreeen from './renderer/components/LoginScreen';
 import Dashboard from './renderer/components/Dashboard';
 import Inventory from './renderer/components/Inventory';
 import SideBar from './renderer/components/SideBar';
@@ -8,46 +8,58 @@ import Expenses from './renderer/components/Expenses';
 import Settings from './renderer/components/Settings';
 import Employees from "./renderer/components/Employees"
 import Customers from "./renderer/components/Customers"
-import axios, { type AxiosInstance } from 'axios';
+import AdminSignup from "./renderer/components/AdminSetup"
+import LoadingScreen from "./renderer/components/Loader"
+import LowStockScreen from "./renderer/components/LowStockAlert"
+import NetworkErrorScreen from "./renderer/components/Error"
+import OtpVerification from "./renderer/components/OTPVerification"
+import CashIn from "./renderer/components/CashIn"
+import CashOut from "./renderer/components/Cashout"
+import SalesRecapScreen from "./renderer/components/SalesRecap"
+import Audit from "./renderer/components/Audit"
+import axios, { type AxiosInstance } from 'axios'
 
-type Page = 'Authorize' | 'Login' | 'Dashboard' | 'Inventory' | 'Sales' | 'Settings' | 'Employees' | 'Expenses' | 'Customers';
+type Page = (
+  'Admin setup' | 'Authorize' | 'Login' | 'Dashboard' | 'Inventory' | 'Sales' | 'OTP Verification' | 'Cash In' | 'Cash Out' | 
+  'Settings' | 'Employees' | 'Expenses' | 'Customers'| 'Main loading' | 'Network Error' | 'Low Stock Alerts' | 'Audit' | 'Sales Recap'
+)
 
-interface NonSensitiveUserData {
+export interface NonSensitiveUserData {
   id: number;
   username: string;
   email: string;
-  role:  "ADMIN" | "CASHIER" | "MANAGER" | "OTHER" | ""
+  role:  "ADMIN" | "CASHIER" | "MANAGER"
 }
 
-const API_BASE_URL = "http://localhost:3000";
-export const AxiosHttpRequest = createContext<AxiosInstance | null>(null)
 
+interface SoftwareConfig {
+  storeName: string;
+  taxRate: number;
+  lowStockValue: number;
+  cloverAppId: string;
+  cloverMerchantId: string;
+  starPrinterIP: string;
+  cloverAccessToken: string;
+  cloverRefreshToken: string;
+}
+
+
+export const AxiosHttpRequest = createContext<AxiosInstance | null>(null)
+export const GeneralProgramSettings = createContext<SoftwareConfig | null>(null)
 
 const App: React.FC = () => {
-  const [currentPage, setCurrentPage] = useState<Page>('Login');
+  const [currentPage, setCurrentPage] = useState<Page>('Main loading');
   const [user, setUser] = useState<NonSensitiveUserData | null>(null);
   const [accessToken, setAccessToken] = useState("")
+  const [signupForm, setSignupForm] = useState<any>({username: "", email: "", password: "", confirmPassword: ""})
+  const [softwareConfig, setSoftwareConfig] =  useState<SoftwareConfig | null>(null)
 
-  const navigateTo = (page: Page) => {
-    setCurrentPage(page);
-  };
-
-  function handleAuthCompletion(accessToken: string) {
-    setAccessToken(accessToken)
-    const userData = JSON.parse(atob(accessToken.split('.')[1]))
-
-    setUser(userData);
-    
-    if (userData.role === 'ADMIN') {
-      navigateTo('Dashboard');
-    } else if (userData.role === 'CASHIER') {
-      navigateTo('Sales');
-    } else {
-      navigateTo('Inventory');
+  const api = axios.create(
+    { baseURL: import.meta.env.VITE_BACKEND_API_BASE_URL, 
+      headers: {'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json'} 
     }
-  };
+  );
 
-  const api = axios.create({ baseURL: API_BASE_URL, headers: {'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json'} });
 
   api.interceptors.response.use((response) => {
     const newToken = response.headers['x-new-access-token'];
@@ -61,11 +73,55 @@ const App: React.FC = () => {
     return Promise.reject(error);
   });
 
+  useEffect(() => {
+    if (currentPage === 'Main loading') {
+      api.get("/api/employees/confirm-admin-exist")
+      .then(response => {
+        if (response.data.message) { // boolean value
+          setCurrentPage('Login')
+        }else {
+          setCurrentPage('Admin setup')
+        }
+      })
+      .catch((error)=> {
+        console.log(error)
+        setCurrentPage('Network Error')
+      })
+    }
+  }, [currentPage])
 
-  const showSidebar = !['Login'].includes(currentPage);
+  const navigateTo = (page: Page) => {
+    setCurrentPage(page);
+  };
+
+  function refreshSoftwareConfig() {
+    api.get("/api/business-details")
+    .then(response => {
+      setSoftwareConfig(response.data)
+    })
+  }
+
+  function handleAuthCompletion(data: {token: string; businessDetails: any}) {
+    setAccessToken(data.token)
+    const userData = JSON.parse(atob(data.token.split('.')[1]))
+    setUser(userData);
+    setSoftwareConfig(data.businessDetails)
+    
+    if (userData.role === 'ADMIN') {
+      navigateTo('Dashboard');
+    } else if (userData.role === 'CASHIER') {
+      navigateTo('Sales');
+    } else {
+      navigateTo('Inventory');
+    }
+  };
+
+  const showSidebar = !['Login', 'Admin setup', 'Main loading', 'Network Error', 'OTP Verification'].includes(currentPage);
 
   return (
+
     <main className="flex h-screen overflow-hidden bg-slate-50 w-screen">
+      <GeneralProgramSettings value={softwareConfig}>
         {showSidebar && (
           <SideBar 
             activePage={currentPage} 
@@ -73,20 +129,32 @@ const App: React.FC = () => {
             user={user} 
           />
         )}
-      <AxiosHttpRequest.Provider value={api}>
-        <div className="flex-1 overflow-y-auto">
-          {currentPage === 'Login' && (
-            <LoginScreen onLoginSuccess={handleAuthCompletion} />
-          )}
-          {currentPage === 'Dashboard' && <Dashboard />}
-          {currentPage === 'Inventory' && <Inventory />}
-          {currentPage === 'Sales' && <Sales/>}
-          {currentPage === 'Employees' && <Employees/>}
-          {currentPage === 'Settings' && <Settings/>}
-          {currentPage === 'Expenses' && <Expenses/>}
-          {currentPage === 'Customers' && <Customers/>}
-        </div>
-      </AxiosHttpRequest.Provider>
+        <AxiosHttpRequest.Provider value={api}>
+          <div className="flex-1 overflow-y-auto">
+            {/* <ExcelUpload/> */}
+            {currentPage === 'Login' && (
+              <AuthScreeen onAuthSuccess={handleAuthCompletion} />
+              // <LoginScreen type={'reset'} email="b" onSend={()=>{}} isLoading={true} />
+            )}
+            {currentPage === 'Main loading' && <LoadingScreen/>}
+            {currentPage === 'Admin setup' && <AdminSignup navigateTo={setCurrentPage as any} storeSignupForm={setSignupForm}/>}
+            {currentPage === 'Network Error' && <NetworkErrorScreen onRetry={()=>setCurrentPage('Main loading')}/>}
+            {currentPage === 'Dashboard' && <Dashboard />}
+            {currentPage === 'Inventory' && <Inventory />}
+            {currentPage === 'Sales' && <Sales user={user!} goToSettings={()=>setCurrentPage('Settings')}/>}
+            {currentPage === 'Employees' && <Employees/>}
+            {currentPage === 'Settings' && <Settings refreshSettings={refreshSoftwareConfig}/>}
+            {currentPage === 'Expenses' && <Expenses/>}
+            {currentPage === 'Customers' && <Customers/>}
+            {currentPage === 'Cash Out' && <CashOut/>}
+            {currentPage === 'Cash In' && <CashIn employee={user!}/>}
+            {currentPage === 'Low Stock Alerts' && <LowStockScreen/>}
+            {currentPage === 'Sales Recap' && <SalesRecapScreen/>}
+            {currentPage === 'Audit' && <Audit user={user!}/>}
+            {currentPage === 'OTP Verification' && signupForm.email && <OtpVerification navigateTo={setCurrentPage as any} email={signupForm.email}/>}
+          </div>
+        </AxiosHttpRequest.Provider>
+      </GeneralProgramSettings>
     </main>
   );
 };

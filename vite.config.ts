@@ -42,7 +42,7 @@ export default defineConfig({
   ],
   server: {
     // This ensures Vite runs on the expected port
-    port: 5173,
+    port: 6006,
     strictPort: true,
   },
   test: {

@@ -28,7 +28,10 @@ dist-electron
 
 .env
 .env.test
+.env.prod
 
 /generated/prisma
 
 /src/generated/prisma
+
+out/

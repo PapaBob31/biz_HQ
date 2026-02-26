@@ -1,23 +1,11 @@
 import { useState, useEffect, useRef, useContext } from 'react';
+import type { Sale } from '../../../prisma/generated/client';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
-  LineChart, Line 
+  LineChart, Line
 } from 'recharts';
-import { Users, Package, DollarSign, AlertTriangle, ArrowUpRight, ArrowDownRight } from 'lucide-react';
+import { Users, Package, DollarSign, AlertTriangle, ArrowUpRight, ArrowDownRight, Ban } from 'lucide-react';
 import { AxiosHttpRequest } from "../../App"
-/*export type Sale = {
-  id: number;
-  total: number;
-  tax: number;
-  totalAfterTax: number;
-  method        String
-  employeeName  String
-  createdAt     DateTime      @default(now())
-  customerId    Int?
-  ProductSold   ProductSold[]
-  Customer      Customer?     @relation(fields: [customerId], references: [id])
-}
-*/
 
 const DashboardLoading = () => {
   return (
@@ -71,8 +59,8 @@ const DashboardLoading = () => {
 };
 
 interface RevenueTrend {
-  month: string;
-  income: number 
+  label: string;
+  revenue: number 
 }
 
 interface TopSellingProduct {
@@ -123,38 +111,71 @@ function getPercentChange(val1: number, val2: number) {
     else 
       return "+0%"
   }else {
-    return ((val2 - val1)/val1).toFixed(2)
+    const change = (val2 - val1)/val1
+    return change >= 0 ? ('+' + change.toFixed(2) + "%") : change.toFixed(2) + "%"
   }
 }
 
+function formatTime(date: Date) {
+  const formattedTime = date.toLocaleTimeString('en-US', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: true,
+  });
+
+  return formattedTime
+}
+
+
 export default function Dashboard () {
   const [revenueTrendData, setRevenueTrendData] = useState<RevenueTrend[]>([])
+  const [recentSales, setRecentSales] = useState<Sale[]>([]);
   const [topSellingData, setTopSellingData] = useState<TopSellingProduct[]>([])
-  const [stats, setStats] = useState({todayRevenue:  0, totalInventory: 0, lowStockCount: 0, customerCount: 0, yesterdayRevenue: 0, monthRevenue: 0})
+  const [stats, setStats] = useState({todayRevenue:  0, totalInventoryCount: 0, lowStockCount: 0, customerCount: 0, yesterdayRevenue: 0, monthRevenue: 0})
   const [loading, setLoading] = useState(true);
   const api = useContext(AxiosHttpRequest)!
+  const [networkErrorOccurred, setNetworkErrorOccurred] = useState(false)
 
   useEffect(() => {
-    // Fetch all 3 endpoints in parallel
+    if (!loading)
+      return;
     Promise.all([
       api.get('/api/business-analytics/top-products'),
-      api.get('/api/business-analytics/revenue-trend'),
+      api.get('/api/business-analytics/revenue-trend?range=this_week'),
       api.get('/api/business-analytics/quick-stats'),
-      // api.get('/api/sales?limit=5'),
+      api.get('/api/sales?limit=5&today=true'),
     ])
-    .then(async ([res1, res2, res3]) => {
+    .then(async ([res1, res2, res3, res4]) => {
       const topProducts = await res1.data;
       const revenueTrend = await res2.data;
       const bizStats = await res3.data;
-      // const recentSales = await res4.data;
+      const recentSales = await res4.data;
       setRevenueTrendData(revenueTrend)
       setTopSellingData(topProducts)
       setStats(bizStats)
+      setRecentSales(recentSales)
       setLoading(false)
+    })
+    .catch(() => {
+      setNetworkErrorOccurred(true)
     });
-  }, []);
+  }, [loading]);
 
   if (loading) return <DashboardLoading />;
+
+
+  if (networkErrorOccurred) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full text-gray-800 p-8">
+        <img src="/connection-lost.svg" className="w-120 "/>
+        <h1 className="text-4xl text-center text-blue-800 font-bold my-4">Request Error</h1>
+        <p className="text-gray-700 w-150 text-center">
+          Something went wrong while trying to get dashboard data. Please retry, or contact the application developer if the problem persists
+        </p>
+        <button onClick={() => {setLoading(true); setNetworkErrorOccurred(false)}} className="mt-4 px-5 py-1 text-lg bg-blue-600 text-white rounded-md cursor-pointer">Retry</button>
+      </div>
+    )
+  }
 
   
   return (
@@ -175,29 +196,30 @@ export default function Dashboard () {
           icon={<Users size={20} />} 
           trend=""
           trendUp={true}
-        /> {/*+12% from last month*/}
+        />
         <StatCard 
           title="Inventory Items" 
-          value={stats.totalInventory} 
+          value={stats.totalInventoryCount} 
           icon={<Package size={20} />} 
           trend="" 
           trendUp={true}
-        />{/*8 new added today*/}
+        />
         <StatCard 
           title="Today's Revenue" 
-          value={stats.todayRevenue} 
+          value={`$${parseFloat(stats.todayRevenue.toFixed(2)).toLocaleString()}`} 
           icon={<DollarSign size={20} />} 
-          subtext={`Month: $${stats.monthRevenue}`}
+          subtext={`Month: $${parseFloat(stats.monthRevenue.toFixed(2)).toLocaleString()}`}
+          isWarning={getPercentChange(stats.yesterdayRevenue, stats.todayRevenue)[0] === '-'}
           trend={getPercentChange(stats.yesterdayRevenue, stats.todayRevenue)}
           trendUp={true}
-        />{/* +5.4% vs yesterday Month: $82,400"*/}
+        />
         <StatCard 
-          title="Low Stock Alert" 
+          title="Low Stock Items" 
           value={stats.lowStockCount} 
-          icon={<AlertTriangle size={20} />} 
-          trend="Action required"
+          icon={stats.lowStockCount > 0 ? <AlertTriangle size={20} /> : <Ban size={20}/>} 
+          trend={stats.lowStockCount > 0 ? "Action required" : ""}
           trendUp={false}
-          isWarning={true}
+          isWarning={stats.lowStockCount > 0}
         />
       </div>
 
@@ -205,33 +227,33 @@ export default function Dashboard () {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
         {/* Card 1: Top 5 Selling Products */}
         <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-          <h3 className="text-lg font-semibold text-slate-800 mb-6">Top 5 Selling Products (Weekly)</h3>
+          <h3 className="text-lg font-semibold text-slate-800 mb-6">Top 5 Selling Products (Current Week)</h3>
           <div className="h-72">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={topSellingData} layout="vertical">
+              <BarChart data={topSellingData} layout="vertical" margin={{bottom: 15}}>
                 <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} />
-                <XAxis type="number" hide />
-                <YAxis dataKey="name" type="category" width={80} tick={{fontSize: 12}} />
+                <XAxis type="number" dataKey={"sold"} label={{value: "Amount Sold", offset: -10,  position: "insideBottom"}} />
+                <YAxis dataKey="name" type="category" width={80} tick={{fontSize: 12}} label={{value: "Product", angle: -90,  position: "insideLeft"}} />
                 <Tooltip cursor={{fill: 'transparent'}} />
-                <Bar dataKey="sales" fill="#3b82f6" radius={[0, 4, 4, 0]} barSize={30} />
+                <Bar dataKey="sold" fill="#3b82f6" radius={[0, 4, 4, 0]} barSize={30} />
               </BarChart>
             </ResponsiveContainer>
           </div>
         </div>
 
-        {/* Card 2: Income History */}
+        {/* Card 2: Revenue History */}
         <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-          <h3 className="text-lg font-semibold text-slate-800 mb-6">Revenue Performance</h3>
+          <h3 className="text-lg font-semibold text-slate-800 mb-6">Revenue Performance (Current Week)</h3>
           <div className="h-72">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={revenueTrendData}>
+              <LineChart data={revenueTrendData} margin={{bottom: 15}}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                <XAxis dataKey="month" tick={{fontSize: 12}} />
-                <YAxis tick={{fontSize: 12}} />
+                <XAxis dataKey="label" tick={{fontSize: 12}} label={{value: "Day", offset: -10,  position: "insideBottom"}} />
+                <YAxis tick={{fontSize: 12}} dataKey="revenue" label={{value: "Revenue", angle: -90,  position: "insideLeft"}} />
                 <Tooltip />
                 <Line 
                   type="monotone" 
-                  dataKey="income" 
+                  dataKey="revenue" 
                   stroke="#10b981" 
                   strokeWidth={3} 
                   dot={{ r: 4, fill: '#10b981' }}
@@ -247,26 +269,25 @@ export default function Dashboard () {
       <div className="bg-white rounded-xl shadow-sm border border-slate-200">
         <div className="p-6 border-b border-slate-100 flex justify-between items-center">
           <h3 className="text-lg font-semibold text-slate-800">Recent Sales Today</h3>
-          <button className="text-blue-600 text-sm font-medium hover:underline">View All Sales</button>
         </div>
-        {/*<div className="overflow-x-auto">
-          <table className="w-full text-left">
-            <thead className="bg-slate-50 text-slate-500 text-xs uppercase font-semibold">
-              <tr>
-                <th className="px-6 py-4 text-center">ID</th>
-                <th className="px-6 py-4">Customer</th>
-                <th className="px-6 py-4">Total</th>
-                <th className="px-6 py-4 text-center">Status</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 text-sm">
-              <RecentSalesRow id="#9921" name="Sarah Jenkins" amount="$42.50" status="Success" />
-              <RecentSalesRow id="#9920" name="Walk-in Customer" amount="$15.00" status="Success" />
-              <RecentSalesRow id="#9919" name="Mark Thompson" amount="$112.99" status="Success" />
-            </tbody>
-          </table>
-        </div>*/}
-        <p className="text-center font-italic bg-slate-100 p-4">No Sales have been made today!</p>
+        {recentSales.length > 0 ? (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left">
+              <thead className="bg-slate-50 text-slate-500 text-xs uppercase font-semibold">
+                <tr>
+                  <th className="px-6 py-4 text-center">ID</th>
+                  <th className="px-6 py-4 text-center">Time</th>
+                  <th className="px-6 py-4">Customer</th>
+                  <th className="px-6 py-4">Total</th>
+                  <th className="px-6 py-4 text-center">Status</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 text-sm">
+                {recentSales.map(sale => <RecentSalesRow key={sale.id} id={sale.id} customer={sale.Customer} amount={sale.total} status="Success" createdAt={sale.createdAt} />)}
+              </tbody>
+            </table>
+          </div>
+        ) : <p className="text-center font-italic bg-slate-100 p-4">No Sales have been made today!</p>}
       </div>
     </div>
   );
@@ -277,7 +298,7 @@ export default function Dashboard () {
 const StatCard = ({ title, value, icon, trend, trendUp, isWarning, subtext }: any) => (
   <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 flex flex-col justify-between">
     <div className="flex justify-between items-start mb-4">
-      <div className={`p-2 rounded-lg ${isWarning ? 'bg-red-50 text-red-600' : 'bg-blue-50 text-blue-600'}`}>
+      <div className={`p-2 rounded-lg ${isWarning ? 'bg-red-50 text-red-600' : 'bg-green-50 text-green-600'}`}>
         {icon}
       </div>
       {trendUp !== undefined && (
@@ -291,17 +312,22 @@ const StatCard = ({ title, value, icon, trend, trendUp, isWarning, subtext }: an
       <p className="text-2xl font-bold text-slate-800 mt-1">{value}</p>
       {subtext && <p className="text-xs text-slate-400 mt-1 font-medium">{subtext}</p>}
     </div>
-    <p className={`text-xs mt-4 font-medium ${isWarning ? 'text-red-500' : 'text-slate-400'}`}>
+    <p className={`text-xs mt-4 font-medium ${isWarning ? 'text-red-500' : 'text-slate-500'}`}>
       {trend}
     </p>
   </div>
 );
 
-const RecentSalesRow = ({ id, name, amount, status }: any) => (
+const RecentSalesRow = ({ id, customer, amount, status, createdAt }: any) => (
   <tr className="hover:bg-slate-50 transition-colors">
-    <td className="px-6 py-4 text-center font-mono text-xs text-slate-400">{id}</td>
-    <td className="px-6 py-4 font-medium text-slate-700">{name}</td>
-    <td className="px-6 py-4 font-bold text-slate-800">{amount}</td>
+    <td className="px-6 py-4 text-center font-mono text-xs text-slate-500">{`#${id.toString().padStart(4, '0')}`}</td>
+    <td className="px-6 py-4 text-center font-mono text-blue-600">
+        {formatTime(new Date(createdAt))}
+    </td>
+    <td className={`px-6 py-4 font-medium ${customer ? 'text-slate-700' : 'text-slate-500' }`}>
+      {customer ? customer.firstName + ' ' + customer.lastName : <Ban size={20}/> }
+    </td>
+    <td className="px-6 py-4 font-bold text-slate-800">${amount}</td>
     <td className="px-6 py-4 text-center">
       <span className="px-2 py-1 bg-emerald-100 text-emerald-700 rounded-md text-[10px] font-bold uppercase tracking-tighter">
         {status}
@@ -309,3 +335,4 @@ const RecentSalesRow = ({ id, name, amount, status }: any) => (
     </td>
   </tr>
 );
+ 

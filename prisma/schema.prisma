@@ -68,6 +68,7 @@ model Product {
   name          String        @unique
   category      String?
   price         Float
+  costPrice     Float         @default(10)
   stockCount    Int
   DateAdded     DateTime      @default(now())
   lastModified  DateTime      @default(now())
@@ -75,6 +76,7 @@ model Product {
   distributorId Int?
   Distributor   Distributor?  @relation(fields: [distributorId], references: [id])
   ProductSold   ProductSold[]
+  InventoryLog  InventoryLog[]
 }
 
 model ProductSold {
@@ -82,7 +84,7 @@ model ProductSold {
   saleId      Int
   productName String
   price       Float
-  discount    Float
+  discount    Float   @default(0)
   quantity    Int
   Product     Product @relation(fields: [productName], references: [name], onDelete: Cascade)
   Sale        Sale    @relation(fields: [saleId], references: [id], onDelete: Cascade)
@@ -103,15 +105,40 @@ model Sale {
 }
 
 model BusinessDetails  {
-  id                OnlyValidId      @unique
-  storeName         String           @default("Biz HQ")
-  taxRate           Float            @default(13)
-  lowStockValue     Int              @default(10)
-  cloverAppId       String?
-  cloverMerchantId  String?
-  starPrinterIP     String?
+  id                  OnlyValidId      @unique
+  storeName           String           @default("Biz HQ")
+  taxRate             Float            @default(13)
+  lowStockValue       Int              @default(10)
+  cloverAppId         String?
+  cloverMerchantId    String?
+  starPrinterIP       String?
+  cloverAccessToken   String?
+  cloverRefreshToken  String?
+  flexSerialNum       String?
 }
 
 enum OnlyValidId {
   one
+}
+
+model CashIn {
+  id           Int      @id @default(autoincrement())
+  employeeName String
+  cashInTotal  Float
+  // Storing denominations as a JSON object: { "quarters": 40, "ones": 50, ... }
+  denominations Json
+  createdAt    DateTime @default(now())
+}
+
+model InventoryLog {
+  id           Int      @id @default(autoincrement())
+  productName  String
+  oldQuantity  Int
+  newQuantity  Int
+  changeAmount Int      // The difference (e.g., -5 or +10)
+  reason       String   // e.g., "Damage", "Return", "Manual Adjustment"
+  employeeName String
+  createdAt    DateTime @default(now())
+
+  Product      Product  @relation(fields: [productName], references: [name], onDelete: Cascade)
 }

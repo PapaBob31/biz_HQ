@@ -5,15 +5,12 @@ import { PrismaClient } from '../prisma/generated/client'
 import bcrypt from 'bcryptjs';
 import fs from 'fs';
 import { PrismaPg } from '@prisma/adapter-pg'
-import server from "./backend"
-import cloverAuthServer from "./backend/clover-auth-server"
-import { generateAccessToken } from "./backend/middlewares"
 import "dotenv/config";
 import Store from 'electron-store'
 import crypto from 'node:crypto'; // For generating UUIDs
+import { autoUpdater } from 'electron-updater';
 
-console.log(process.env.DATABASE_URL)
-const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL })
+const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL || "postgresql://neondb_owner:npg_Q35WmzIeauUP@ep-still-king-ah2bgu7k-pooler.c-3.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require" })
 const prisma = new PrismaClient({ adapter })
 
 const __filename = fileURLToPath(import.meta.url);
@@ -23,6 +20,33 @@ const __dirname = path.dirname(__filename);
 const DIST = path.join(__dirname, '../dist')
 
 let mainWindow;
+
+
+// Tell it where to check for updates
+autoUpdater.setFeedURL({
+  provider: 'generic',
+  url: `${import.meta.env.VITE_BACKEND_API_BASE_URL}/updates`
+});
+
+// Silent auto-update settings
+autoUpdater.autoDownload = true;
+autoUpdater.autoInstallOnAppQuit = true;
+
+
+app.on('ready', () => {
+  createWindow();
+
+  // Check for updates 5 seconds after app starts
+  setTimeout(() => {
+    autoUpdater.checkForUpdates();
+  }, 5000);
+});
+
+app.on('window-all-closed', () => {
+  if (process.platform !== 'darwin') {
+    app.quit();
+  }
+});
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -34,11 +58,11 @@ function createWindow() {
       nodeIntegration: false
     },
   });
-  mainWindow.webContents.openDevTools()
 
   if (process.env.VITE_DEV_SERVER_URL) {
     mainWindow.loadURL(process.env.VITE_DEV_SERVER_URL)
-  } else {
+    mainWindow.webContents.openDevTools()
+  } else { // we are in production
     mainWindow.loadFile(path.join(DIST, 'index.html'))
   } 
 }
@@ -64,42 +88,6 @@ export function getDecryptedAccessToken() {
   return safeStorage.decryptString(Buffer.from(hex, 'hex'));
 }
 
-
-server.listen(3000)
-cloverAuthServer.listen(4999, () => console.log('Auth Bridge running on port 4999'));
-
-
-ipcMain.handle('trigger-clover-payment', async (event, { amount, orderId }) => {
-  const token = getDecryptedAccessToken();
-  const merchantId = store.get('merchant_id');
-  const deviceId = store.get('clover_device_id');
-  const appId = 'YOUR_APP_ID_HERE'; // The non-editable ID you mentioned earlier
-
-  // Rest Pay Display Endpoint (Cloud)
-  const url = `https://apisandbox.dev.clover.com/connect/v1/payments`;
-
-  try {
-    const response = await axios.post(url, {
-      amount: amount,          // in cents
-      externalPaymentId: orderId,
-      final: true,             // Tells Clover to finalize the sale immediately
-    }, {
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'X-Clover-Device-Id': deviceId,
-        'X-POS-Id': appId,
-        'Idempotency-Key': crypto.randomUUID(), // Unique for every single request
-        'Content-Type': 'application/json',
-        'Accept': 'application/json'
-      }
-    });
-
-    return { success: true, data: response.data };
-  } catch (err) {
-    // If it's a 401, you should trigger your token refresh logic here
-    return { success: false, error: err.response?.data?.message || err.message };
-  }
-});
 
 ipcMain.handle('generate-pdf-report', async (event) => {
   const printWindow = new BrowserWindow({ show: false });

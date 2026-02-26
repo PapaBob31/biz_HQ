@@ -3,7 +3,19 @@ import { Users, Search, Plus, Phone, Mail, Award, Edit2, History, X, User, FileT
 import type { Customer } from '../../../prisma/generated/client';
 import { AxiosHttpRequest } from "../../App"
 
-const CustomerModal = ({ isOpen, onClose, onSave, customerToEdit }: any) => {
+function generateJSONObj(formData: FormData) {
+  const obj: any = {}
+
+  for (const key of formData.keys()){
+    obj[key] = formData.get(key);
+  }
+
+  return obj
+
+}
+
+
+function CustomerModal({ isOpen, onClose, onSave, customerToEdit }: {isOpen: boolean, onClose: ()=>void, onSave:()=>void, customerToEdit: Customer|null}) {
   const [loading, setLoading] = useState(false);
   const isEdit = !!customerToEdit;
   const api = useContext(AxiosHttpRequest)!
@@ -13,7 +25,14 @@ const CustomerModal = ({ isOpen, onClose, onSave, customerToEdit }: any) => {
     setLoading(true);
     
     const formData = new FormData(e.currentTarget);
-    const payload = Object.fromEntries(formData);
+    const payload = generateJSONObj(formData);
+
+    if (!payload.email) {
+      payload.email = null;
+    }
+    if (!payload.phone) {
+      payload.phone = null;
+    }
 
     const url = isEdit ? `/api/customers/${customerToEdit.id}` : `/api/customers`;
     const method = isEdit ? 'PUT' : 'POST';
@@ -24,14 +43,14 @@ const CustomerModal = ({ isOpen, onClose, onSave, customerToEdit }: any) => {
         method,
         data: JSON.stringify(payload),
       });
-      if (res.status == 200) {
+      if (res.status == 201) {
         onSave();
-        onClose();
       }
     } catch (error) {
       console.error("Save failed", error);
     } finally {
       setLoading(false);
+      onClose();
     }
   };
 
@@ -40,13 +59,13 @@ const CustomerModal = ({ isOpen, onClose, onSave, customerToEdit }: any) => {
   return (
     <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
       <div className="bg-white rounded-3xl w-full max-w-xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
-        <div className="px-8 py-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+        <div className="px-8 py-6 border-b border-slate-100 flex justify-between items-center bg-slate-50">
           <div>
             <h2 className="text-xl font-black text-slate-800">{isEdit ? 'Edit Profile' : 'New Customer'}</h2>
-            <p className="text-sm text-slate-500">Capture details for loyalty tracking</p>
+            <p className="text-sm text-slate-500">{isEdit ? "Edit a Customer's details" : 'Capture details for loyalty tracking'}</p>
           </div>
-          <button onClick={onClose} className="p-2 hover:bg-white rounded-full transition shadow-sm">
-            <X size={20} className="text-slate-400" />
+          <button onClick={onClose} className="p-2 hover:bg-white rounded-full transition shadow-sm cursor-pointer">
+            <X size={20} className="text-slate-700" />
           </button>
         </div>
 
@@ -54,13 +73,13 @@ const CustomerModal = ({ isOpen, onClose, onSave, customerToEdit }: any) => {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="flex items-center gap-2 text-sm font-bold text-slate-700 mb-2">
-                <User size={16} className="text-blue-500" /> First Name
+                <User size={16} className="text-blue-500" /> First Name *
               </label>
-              <input name="firstName" defaultValue={customerToEdit?.firstName} required className="w-full p-3 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-blue-500" />
+              <input name="firstName" defaultValue={customerToEdit?.firstName} required className="w-full p-3 bg-slate-100 border-none rounded-2xl focus:outline-2 focus:outline-blue-500" />
             </div>
             <div>
-              <label className="text-sm font-bold text-slate-700 mb-2 block">Last Name</label>
-              <input name="lastName" defaultValue={customerToEdit?.lastName} required className="w-full p-3 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-blue-500" />
+              <label className="text-sm font-bold text-slate-700 mb-2 block">Last Name *</label>
+              <input name="lastName" defaultValue={customerToEdit?.lastName} required className="w-full p-3 bg-slate-100 border-none rounded-2xl focus:outline-2 focus:outline-blue-500" />
             </div>
           </div>
 
@@ -69,29 +88,38 @@ const CustomerModal = ({ isOpen, onClose, onSave, customerToEdit }: any) => {
               <label className="flex items-center gap-2 text-sm font-bold text-slate-700 mb-2">
                 <Phone size={16} className="text-emerald-500" /> Phone
               </label>
-              <input name="phone" defaultValue={customerToEdit?.phone} placeholder="(555) 000-0000" className="w-full p-3 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-blue-500" />
+              <input name="phone" defaultValue={customerToEdit?.phone} placeholder="(555) 000-0000" 
+              className="w-full p-3 bg-slate-100 border-none rounded-2xl focus:outline-2 focus:outline-blue-500" />
             </div>
             <div>
               <label className="flex items-center gap-2 text-sm font-bold text-slate-700 mb-2">
                 <Mail size={16} className="text-purple-500" /> Email
               </label>
-              <input name="email" type="email" defaultValue={customerToEdit?.email} placeholder="hello@example.com" className="w-full p-3 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-blue-500" />
+              <input name="email" type="email" defaultValue={customerToEdit?.email} placeholder="hello@example.com" 
+              className="w-full p-3 bg-slate-100 border-none rounded-2xl focus:outline-2 focus:outline-blue-500" />
             </div>
           </div>
+
+          {/*isEdit && <div>
+            <label className="flex items-center gap-2 text-sm font-bold text-slate-700 mb-2">
+              <Award size={16} className="text-orange-500" /> Loyalty Points
+            </label>
+            <input name="loyaltyPoints" defaultValue={customerToEdit?.loyaltyPoints} type="number" 
+            className="w-full p-3 bg-slate-100 border-none rounded-2xl focus:outline-2 focus:outline-blue-500 resize-none" placeholder="Loyalty points" />
+          </div>*/}
 
           <div>
             <label className="flex items-center gap-2 text-sm font-bold text-slate-700 mb-2">
               <FileText size={16} className="text-orange-500" /> Internal Notes
             </label>
-            <textarea name="notes" defaultValue={customerToEdit?.notes} rows={3} className="w-full p-3 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-blue-500 resize-none" placeholder="Preferences, allergies, or special requests..." />
+            <textarea name="notes" defaultValue={customerToEdit?.notes} rows={3} 
+            className="w-full p-3 bg-slate-100 border-none rounded-2xl focus:outline-2 focus:outline-blue-500 resize-none" placeholder="Preferences or special requests..." />
           </div>
 
-          <div className="flex gap-3 pt-4">
-            <button type="button" onClick={onClose} className="flex-1 py-4 bg-slate-100 text-slate-600 font-bold rounded-2xl hover:bg-slate-200 transition">Cancel</button>
-            <button type="submit" disabled={loading} className="flex-1 py-4 bg-blue-600 text-white font-bold rounded-2xl hover:bg-blue-700 shadow-lg shadow-blue-200 transition flex items-center justify-center gap-2">
-              <Save size={18}/> {loading ? "Saving..." : "Save Profile"}
-            </button>
-          </div>
+          <button type="submit" disabled={loading} 
+          className="flex-1 py-4 bg-blue-600 text-white font-bold rounded-2xl hover:bg-blue-700 transition w-full flex items-center justify-center gap-2 cursor-pointer">
+            <Save size={18}/> {loading ? "Saving..." : "Save Profile"}
+          </button>
         </form>
       </div>
     </div>
@@ -146,7 +174,7 @@ export default function CustomerScreen() {
             <h2 className="text-xl font-bold flex items-center gap-2"><Users size={20}/>Customer Directory</h2>
             <button 
               onClick={() => { setSelectedCustomer(null); setIsModalOpen(true); }}
-              className="p-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition"
+              className="p-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition cursor-pointer"
             >
               <Plus size={20}/>
             </button>
@@ -155,7 +183,7 @@ export default function CustomerScreen() {
             <Search className="absolute left-3 top-2.5 text-slate-400" size={18} />
             <input 
               placeholder="Search by name or phone..." 
-              className="w-full pl-10 pr-4 py-2 bg-slate-100 border-none rounded-xl text-sm"
+              className="w-full pl-10 pr-4 py-2 bg-slate-100 border-none rounded-xl text-sm focus:outline-2 focus:outline-blue-600"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
@@ -163,11 +191,12 @@ export default function CustomerScreen() {
         </div>
 
         <div className="flex-1 overflow-y-auto">
-          {customers.map((c: any) => (
+          {customers.map((c: Customer) => (
             <button 
               key={c.id}
-              onClick={() => setSelectedCustomer(c)}
-              className={`w-full p-4 flex items-center justify-between border-b border-slate-50 transition ${selectedCustomer?.id === c.id ? 'bg-blue-50 border-blue-100' : 'hover:bg-slate-50'}`}
+              onClick={() => setSelectedCustomer(c === selectedCustomer ? null : c )}
+              className={`w-full p-4 flex items-center justify-between border-b border-slate-50 transition 
+              ${selectedCustomer?.id === c.id ? 'bg-blue-50 border-blue-100' : 'hover:bg-slate-50'}`}
             >
               <div className="text-left">
                 <p className="font-bold text-slate-800">{c.firstName} {c.lastName}</p>

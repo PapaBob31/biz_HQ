@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useState, useEffect, useContext, useRef } from 'react';
 import { UserPlus, Shield, Mail, Key, AlertTriangle, Trash2, Edit2,Loader2, AlertCircle, RefreshCw, X } from 'lucide-react';
 import type { Employee } from '../../../prisma/generated/client';
 import { AxiosHttpRequest } from '../../App';
@@ -73,20 +73,19 @@ function EmployeeEditModal(
   const api = useContext(AxiosHttpRequest)!
   function sendEmployeEditRequest(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    const formData = new FormData(e.currentTarget);
+
+    const formData = new FormData(e.currentTarget!);
     const payload = Object.fromEntries(formData);
-    
-    api.put(`/api/employees/${employee.id}`, {
-      data: payload
-    })
-    .then(response => {
-      updateEmployeeDisplay(response.data)
+
+    api.put(`/api/employees/${employee.id}`, payload)
+    .then(() => {
+      updateEmployeeDisplay({id: employee.id, ...payload} as any)
       closeModal();
     })
     .catch(err => {
       console.log(err)
       displayError("Something went wrong while modifying Inventory")
-    })
+    }) 
 
   }
   return (
@@ -95,31 +94,27 @@ function EmployeeEditModal(
         <h2 className="text-xl font-bold mb-4">Edit Employee Details</h2>
         <form onSubmit={sendEmployeEditRequest} className="space-y-4">
           <input 
+            name="username"
             placeholder="User Name" 
             className="w-full p-2 border rounded border border-slate-300 focus:ring-2 focus:ring-blue-500 outline-none"
             defaultValue={employee.username}
             required
           />
           <input 
+            name="email"
             placeholder="Email" type="email"
             className="w-full p-2 border rounded border border-slate-300 focus:ring-2 focus:ring-blue-500 outline-none"
             defaultValue={employee.email}
             required
           />
           <select 
+            name="role"
             className="w-full p-2 border rounded bg-white"
           >
             <option value="Cashier" selected={employee.role === "CASHIER"}>Cashier</option>
             <option value="Manager" selected={employee.role === "MANAGER"}>Manager</option>
             <option value="Admin" selected={employee.role === "ADMIN"}>Admin</option>
-            <option value="Other" selected={employee.role === "OTHER"}>Other</option>
           </select>
-          <input 
-            placeholder="New Password" type="password"
-            className="w-full p-2 border rounded border border-slate-300 focus:ring-2 focus:ring-blue-500 outline-none"
-            defaultValue=""
-            required
-          />
           <div className="flex gap-2">
             <button type="button" onClick={closeModal} className="cursor-pointer flex-1 py-2 bg-slate-200 rounded-md">Cancel</button>
             <button type="submit" className="cursor-pointer flex-1 py-2 bg-blue-600 text-white rounded-md cursor-pointer">Update Details</button>
@@ -170,7 +165,7 @@ export default function Employees() {
       employeesList[targetEmployeeIndex] = updatedData;
       setEmployees(employeesList)
     }else {
-      setErrorModal({opened: true, content: 'Employee to be deleted could not be found!'})
+      setErrorModal({opened: true, content: 'Employee to be update could not be found!'})
     }
   }
 
@@ -178,11 +173,10 @@ export default function Employees() {
     e.preventDefault();
     
     try {
-      const response = await api.post('/api/employees', {
-        data: {employeeData: newStaff}
-      });
+      const response = await api.post('/api/employees',{employeeData: newStaff});
 
-      if (response.status === 200) {
+      if (response.status === 201) {
+        console.log("da fuck?")
         const savedEmployee = await response.data;
         setEmployees([...employees, savedEmployee]); // Update local state
         setModalOpen(false); // Close modal
@@ -240,7 +234,7 @@ export default function Employees() {
           <p className="text-slate-500 text-sm">Control access levels and system permissions</p>
         </div>
         <button onClick={() => setModalOpen(true)}
-          className="cursor-pointer flex items-center gap-2 bg-blue-600 text-white px-5 py-2.5 rounded-xl hover:bg-blue-700 transition shadow-lg shadow-blue-200">
+          className="cursor-pointer flex items-center gap-2 bg-blue-600 text-white px-5 py-2.5 rounded-xl hover:bg-blue-700 transition shadow-md shadow-gray-200">
           <UserPlus size={18} /> Add Employee
         </button>
       </div>
@@ -286,11 +280,11 @@ export default function Employees() {
       {/* Basic Modal Placeholder */}
       {modalOpen && !employeeToEdit && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white p-8 rounded-xl w-96 shadow-xl">
+          <div className="bg-white p-8 rounded-xl w-120 shadow-xl">
             <h2 className="text-xl font-bold mb-4">Create New Staff</h2>
             <form onSubmit={handleEmployeeCreation} className="space-y-4">
               <input 
-                placeholder="Full Name" 
+                placeholder="Username" 
                 className="w-full p-2 border rounded border border-slate-300 focus:ring-2 focus:ring-blue-500 outline-none"
                 onChange={e => setNewStaff({...newStaff, username: e.target.value})}
                 required
@@ -308,7 +302,6 @@ export default function Employees() {
                 <option value="Cashier">Cashier</option>
                 <option value="Manager">Manager</option>
                 <option value="Admin">Admin</option>
-                <option value="Other">Other</option>
               </select>
               <input 
                 placeholder="Initial Password" type="password"

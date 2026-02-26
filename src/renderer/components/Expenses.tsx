@@ -37,6 +37,7 @@ function AddExpenseModal({ isOpen, onClose, onSave, expenseToEdit } : {
       amount: parseFloat(data.amount as string),
       date: new Date(data.date as string).toISOString(),
     };
+    console.log(payload)
 
     try {
       const res = await api.post(url, {
@@ -65,7 +66,7 @@ function AddExpenseModal({ isOpen, onClose, onSave, expenseToEdit } : {
             <h2 className="text-xl font-black text-slate-800">{isEdit ? 'Edit Record' : 'Record Expense'}</h2>
             <p className="text-sm text-slate-500">Add a new outgoing cost to the ledger</p>
           </div>
-          <button onClick={onClose} className="p-2 hover:bg-white rounded-full transition shadow-sm">
+          <button onClick={onClose} className="p-2 hover:bg-white rounded-full transition shadow-sm cursor-pointer">
             <X size={20} className="text-slate-400" />
           </button>
         </div>
@@ -74,7 +75,7 @@ function AddExpenseModal({ isOpen, onClose, onSave, expenseToEdit } : {
           {/* Main Title */}
           <div>
             <label className="flex items-center gap-2 text-sm font-bold text-slate-700 mb-2">
-              <AlignLeft size={16} className="text-blue-500" /> Expense Title
+              <AlignLeft size={16} className="text-blue-500" /> Expense Title *
             </label>
             <input 
               name="title" 
@@ -89,7 +90,7 @@ function AddExpenseModal({ isOpen, onClose, onSave, expenseToEdit } : {
             {/* Amount */}
             <div>
               <label className="flex items-center gap-2 text-sm font-bold text-slate-700 mb-2">
-                <DollarSign size={16} className="text-emerald-500" /> Amount
+                <DollarSign size={16} className="text-emerald-500" /> Amount *
               </label>
               <input 
                 name="amount" 
@@ -104,7 +105,7 @@ function AddExpenseModal({ isOpen, onClose, onSave, expenseToEdit } : {
             {/* Date */}
             <div>
               <label className="flex items-center gap-2 text-sm font-bold text-slate-700 mb-2">
-                <Calendar size={16} className="text-purple-500" /> Date
+                <Calendar size={16} className="text-purple-500" /> Date *
               </label>
               <input 
                 name="date" 
@@ -137,14 +138,14 @@ function AddExpenseModal({ isOpen, onClose, onSave, expenseToEdit } : {
             <button 
               type="button" 
               onClick={onClose} 
-              className="flex-1 py-4 bg-slate-100 text-slate-600 font-bold rounded-2xl hover:bg-slate-200 transition"
+              className="flex-1 py-4 bg-slate-100 text-slate-600 font-bold rounded-2xl hover:bg-slate-200 transition cursor-pointer"
             >
               Cancel
             </button>
             <button 
               type="submit" 
               disabled={loading}
-              className="flex-1 py-4 bg-blue-600 text-white font-bold rounded-2xl hover:bg-blue-700 shadow-lg shadow-blue-200 transition disabled:opacity-50"
+              className="flex-1 py-4 bg-blue-600 text-white font-bold rounded-2xl hover:bg-blue-700 shadow-md shadow-gray-200 transition disabled:opacity-50 cursor-pointer"
             >
               {loading ? "Saving..." : "Save Expense"}
             </button>

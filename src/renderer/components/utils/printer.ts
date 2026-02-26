@@ -1,49 +1,60 @@
 // import type { Sale } from '../../../../prisma/generated/client';
 // utils/printer.ts
-export async function printReceipt (printerIp: string, sale: any) {
-  const storeName = "MY AWESOME RETAIL STORE";
-  const storeAddress = "123 Tech Lane, Silicon Valley";
-  const storePhone = "(555) 123-4567";
+export async function printReceipt (printerIp: string, sale: any, businessName: string) {
   
   const dateStr = new Date(sale.createdAt).toLocaleString();
+
+  /**
+   * <text>${storeAddress}\n</text>
+      <text>${storePhone}\n\n</text>
+   */
 
   // Generate Item Lines
   const itemLines = sale.items.map(item => 
     `<text>${item.name.padEnd(20)} x${item.quantity}  $${(item.price * item.quantity).toFixed(2)}\n</text>`
   ).join('');
 
+  
+			
+	  		
   const xml = `
-    <root>
-      <alignment position="center" />
-      <text font="emphasized" width="2" height="2">${storeName}\n</text>
-      <text>${storeAddress}\n</text>
-      <text>${storePhone}\n\n</text>
-      
-      <alignment position="left" />
-      <text>Date: ${dateStr}\n</text>
-      <text>Order ID: #000${sale.id}\n</text>
-      <text>Cashier: ${sale.employeeName}\n</text>
-      <text>--------------------------------\n</text>
-      
-      ${itemLines}
-      
-      <text>--------------------------------\n</text>
-      <alignment position="right" />
-      <text>Subtotal: $${sale.total.toFixed(2)}\n</text>
-      <text>Tax (7.5%): $${sale.tax.toFixed(2)}\n</text>
-      <text font="emphasized" width="1" height="2">TOTAL: $${sale.totalAfterTax.toFixed(2)}\n</text>
-      
-      <alignment position="center" />
-      <text>\nThank you for shopping!\n</text>
-      <text>Please keep your receipt for returns.\n\n</text>
-      
-      <cut type="partial" />
-    </root>
+<?xml version="1.0" encoding="UTF-8"?>
+<root>
+  <StarWebPrint
+    xmlns="http://www.star-m.jp"
+    xmlns:i="http://www.w3.org/2001/XMLSchema-instance">
+      <Request>
+        <InitializePrint />
+        <alignment position="center" />
+        <text font="emphasized" width="2" height="2">${businessName}\n</text>
+        
+        <alignment position="left" />
+        <text>Date: ${dateStr}\n</text>
+        <text>Order ID: #000${sale.id}\n</text>
+        <text>Cashier: ${sale.employeeName}\n</text>
+        <text>--------------------------------\n</text>
+        
+        ${itemLines}
+        
+        <text>--------------------------------\n</text>
+        <alignment position="right" />
+        <text>Subtotal: $${sale.total.toFixed(2)}\n</text>
+        <text>Tax (7.5%): $${sale.tax.toFixed(2)}\n</text>
+        <text font="emphasized" width="1" height="2">TOTAL: $${sale.totalAfterTax.toFixed(2)}\n</text>
+        
+        <alignment position="center" />
+        <text>\nThank you for shopping!\n</text>
+        <text>Please keep your receipt for returns.\n\n</text>
+        
+        <cut type="partial" />
+      </Request>
+    </StarWebPrint>
+  </root>
   `;
 
   return fetch(`http://${printerIp}/StarWebPRNT/SendMessage`, {
     method: 'POST',
-    headers: { 'Content-Type': 'text/xml' },
+    headers: { 'Content-Type': 'text/xml', 'charset': 'UTF-8' },
     body: xml
   });
 };

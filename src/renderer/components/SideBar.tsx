@@ -1,5 +1,8 @@
 import React from 'react';
-import { LayoutDashboard, Package, ShoppingCart, Settings, LogOut, Store, Factory, BanknoteArrowUp, Users } from 'lucide-react';
+import { 
+  LayoutDashboard, Package, ShoppingCart, Settings, LogOut, Store, Factory, BanknoteArrowUp, BookPlus, BookMinus, Users, AlertTriangle,
+  PackageCheck 
+} from 'lucide-react';
 
 interface SidebarProps {
   activePage: string;
@@ -9,13 +12,18 @@ interface SidebarProps {
 
 const Sidebar: React.FC<SidebarProps> = ({ activePage, onNavigate, user }) => {
   const menuItems = [
-    { id: 'Dashboard', icon: <LayoutDashboard size={20}/>, label: 'Dashboard', roles: ['ADMIN'] },
-    { id: 'Inventory', icon: <Package size={20}/>, label: 'Inventory', roles: ['ADMIN', 'MANAGER', 'CASHIER'] },
-    { id: 'Sales', icon: <ShoppingCart size={20}/>, label: 'Sales Terminal', roles: ['ADMIN', 'MANAGER', 'CASHIER'] },
-    { id: 'Settings', icon: <Settings size={20}/>, label: 'Settings', roles: ['ADMIN'] },
-    { id: 'Employees', icon: <Factory size={20}/>, label: 'Employees', roles: ['ADMIN'] },
-    { id: 'Expenses', icon: <BanknoteArrowUp size={20}/>, label: 'Expenses', roles: ['MANAGER', 'ADMIN'] },
-    { id: 'Customers', icon: <Users size={20}/>, label: 'Customers', roles: ['MANAGER', 'ADMIN', 'CASHIER'] },
+    { id: 'Dashboard', icon: <LayoutDashboard size={18}/>, label: 'Dashboard', roles: ['ADMIN'] },
+    { id: 'Inventory', icon: <Package size={18}/>, label: 'Inventory', roles: ['ADMIN', 'MANAGER', 'CASHIER'] },
+    { id: 'Sales', icon: <ShoppingCart size={18}/>, label: 'Sales Terminal', roles: ['ADMIN', 'MANAGER', 'CASHIER'] },
+    { id: 'Settings', icon: <Settings size={18}/>, label: 'Settings', roles: ['ADMIN', 'MANAGER', 'CASHIER'] },
+    { id: 'Employees', icon: <Factory size={18}/>, label: 'Employees', roles: ['ADMIN'] },
+    { id: 'Expenses', icon: <BanknoteArrowUp size={18}/>, label: 'Expenses', roles: ['MANAGER', 'ADMIN'] },
+    { id: 'Customers', icon: <Users size={18}/>, label: 'Customers', roles: ['MANAGER', 'ADMIN', 'CASHIER'] },
+    { id: 'Low Stock Alerts', icon: <AlertTriangle size={18}/>, label: 'Low Stock Alerts', roles: ['MANAGER', 'ADMIN', 'CASHIER'] },
+    { id: 'Cash In', icon: <BookPlus size={18}/>, label: 'Cash In', roles: ['ADMIN'] },
+    { id: 'Cash Out', icon: <BookMinus size={18}/>, label: 'Cash Out', roles: ['ADMIN'] },
+    { id: 'Sales Recap', icon: <BookMinus size={18}/>, label: 'Sales Recap', roles: ['ADMIN'] },
+    { id: 'Audit', icon: <PackageCheck size={18}/>, label: 'Audit', roles: ['ADMIN', 'MANAGER', 'CASHIER'] },
   ];
 
   return (
@@ -25,12 +33,12 @@ const Sidebar: React.FC<SidebarProps> = ({ activePage, onNavigate, user }) => {
         <span className="font-bold text-xl tracking-tight">Biz HQ</span>
       </div>
 
-      <nav className="flex-1 p-4 space-y-2 mt-4">
+      <nav className="flex-1 p-4 space-y-2 mt-4 overflow-y-auto">
         {menuItems.filter(item => item.roles.includes(user?.role)).map((item) => (
           <button
             key={item.id}
             onClick={() => onNavigate(item.id)}
-            className={`w-full flex items-center gap-4 px-4 py-3 rounded-lg transition-all duration-200 cursor-pointer ${
+            className={`w-full flex items-center text-md gap-4 px-4 py-2 rounded-lg transition-all duration-200 cursor-pointer ${
               activePage === item.id 
               ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/20' 
               : 'hover:bg-slate-800 hover:text-white'
@@ -53,7 +61,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activePage, onNavigate, user }) => {
           </div>
         </div>
         <button onClick={() => window.location.reload()} className="w-full flex items-center gap-4 px-4 py-3 rounded-lg hover:bg-red-900/20 hover:text-red-400 transition-colors">
-          <LogOut size={20} />
+          <LogOut size={20} onClick={() => onNavigate("Login")} />
           <span className="font-medium">Sign Out</span>
         </button>
       </div>
