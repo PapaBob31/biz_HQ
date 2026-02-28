@@ -1,5 +1,5 @@
-// import type { Sale } from '../../../../prisma/generated/client';
-// utils/printer.ts
+import {type CartItem } from "./../Sales"
+
 export async function printReceipt (printerIp: string, sale: any, businessName: string) {
   
   const dateStr = new Date(sale.createdAt).toLocaleString();
@@ -10,15 +10,12 @@ export async function printReceipt (printerIp: string, sale: any, businessName: 
    */
 
   // Generate Item Lines
-  const itemLines = sale.items.map(item => 
+  const itemLines = sale.items.map((item: CartItem) => 
     `<text>${item.name.padEnd(20)} x${item.quantity}  $${(item.price * item.quantity).toFixed(2)}\n</text>`
   ).join('');
 
-  
-			
 	  		
   const xml = `
-<?xml version="1.0" encoding="UTF-8"?>
 <root>
   <StarWebPrint
     xmlns="http://www.star-m.jp"
@@ -30,7 +27,7 @@ export async function printReceipt (printerIp: string, sale: any, businessName: 
         
         <alignment position="left" />
         <text>Date: ${dateStr}\n</text>
-        <text>Order ID: #000${sale.id}\n</text>
+        <text>Order ID: #${sale.id.toString().padStart(4, "0")}\n</text>
         <text>Cashier: ${sale.employeeName}\n</text>
         <text>--------------------------------\n</text>
         
@@ -38,9 +35,9 @@ export async function printReceipt (printerIp: string, sale: any, businessName: 
         
         <text>--------------------------------\n</text>
         <alignment position="right" />
-        <text>Subtotal: $${sale.total.toFixed(2)}\n</text>
+        <text>Subtotal: $${sale.subTotal.toFixed(2)}\n</text>
         <text>Tax (7.5%): $${sale.tax.toFixed(2)}\n</text>
-        <text font="emphasized" width="1" height="2">TOTAL: $${sale.totalAfterTax.toFixed(2)}\n</text>
+        <text font="emphasized" width="1" height="2">TOTAL: $${sale.total.toFixed(2)}\n</text>
         
         <alignment position="center" />
         <text>\nThank you for shopping!\n</text>
@@ -61,22 +58,29 @@ export async function printReceipt (printerIp: string, sale: any, businessName: 
 
 export async function kickCashDrawer(printerIp: string) {
   const xml = `
-    <root>
-      <peripheral channel="1" ontime="200" offtime="200" />
-    </root>
+  <root>
+    <StarWebPrint
+      xmlns="http://www.star-m.jp"
+      xmlns:i="http://www.w3.org/2001/XMLSchema-instance">
+        <Request>
+          <peripheral channel="1" ontime="200" offtime="200" />
+        </Request>
+    </StarWebPrint>
+  </root>
   `;
   try {
-    await fetch(`http://${printerIp}/StarWebPRNT/SendMessage`, {
+    const response = await fetch(`http://${printerIp}/StarWebPRNT/SendMessage`, {
       method: 'POST',
       headers: { 'Content-Type': 'text/xml' },
       body: xml
     });
+    return response
   } catch (e) {
-    console.error("Hardware Error: Could not reach printer for drawer kick.");
+    alert("Hardware Error: Could not reach printer for drawer kick.");
   }
+  return null
 };
 
-// utils/hardwareManager.ts
 
 /**
  * Pings the printer to check if it's reachable and returns its current status.

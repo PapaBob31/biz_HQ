@@ -8,7 +8,7 @@ export default function OtpVerification({navigateTo, email}: {navigateTo: (path:
     const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
     const [error, setError] = useState("")
     const [isSubmitting, setIsSubmitting] = useState(false)
-    const [otpVerified, setOtpVerified] = useState(true)
+    const [otpVerified, setOtpVerified] = useState(false)
 
     // Countdown Logic
     useEffect(() => {

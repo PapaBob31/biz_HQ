@@ -193,7 +193,7 @@ function HardwareSettings({printerIp, refreshSettings, businessName} : {printerI
 
   const handleRefreshPrinter = async () => {
     setPrinterStatus({online: false, message: 'Loading'})
-    const res = await checkPrinterStatus(printerIp);
+    const res = await checkPrinterStatus(starPrinterIp);
     setPrinterStatus(res);
   };
 
@@ -240,7 +240,6 @@ function HardwareSettings({printerIp, refreshSettings, businessName} : {printerI
                       setStarPrinterIp(e.target.value);
                       setPrinterStatus({ online: false, message: '' })
                       setIpEdited(true);
-                      localStorage.setItem('printer_ip', e.target.value);
                     }}
                     placeholder="192.168.1.XX"
                     className="w-full p-3 bg-gray-100 rounded-lg border-none focus:ring-2 focus:ring-blue-500"

@@ -126,7 +126,7 @@ function EmptyInventory({searchQuery, setSearchQuery}: {searchQuery: string, set
 }
 
 
-interface CartItem extends Product {
+export interface CartItem extends Product {
   quantity: number;
 }
 
@@ -218,14 +218,24 @@ const CheckoutScreen = ({ user, goToSettings } : {user: NonSensitiveUserData, go
     }
 
     api.post('api/sales', saleData)
-    .then(response => {
+    .then(async (response) => {
       setLastSaleId(response.data.saleId);
       // print receipt
-      // await printReceipt(printerIp, { ...saleData, id: res.data.id, createdAt: res.data.createdAt });
+      printReceipt(softwareConfig.starPrinterIP, { ...saleData, id: response.data.saleId, createdAt: response.data.createdAt }, softwareConfig.storeName)
+      .then(res => {
+        if (!res.ok){
+          alert(`Unexpected Error ${res.status} while trying to print. Please make sure the printer is connected and properly configured in this software's settings`)
+        }
+      })
+      .catch(err => {
+        console.log(err); 
+        alert("Unexpected Error while trying to print. Please make sure the printer is connected and properly configured in this software's settings")
+      })
       updateInventoryUI(cart)
       setCart([]);
     })
     .catch(error => {
+      console.log("B", error)
       const msg = error.response?.data?.error || "Unexpected Error. Please try again.";
       setErrorMessage(msg);
     }).finally(() => setIsProcessing(''))
@@ -235,6 +245,16 @@ const CheckoutScreen = ({ user, goToSettings } : {user: NonSensitiveUserData, go
     setIsProcessing('CLOVER');
     setErrorMessage('');
     let lastPaymentTimestamp = 0;
+
+    if (saleCustomer && (loyaltyDiscount > saleCustomer.loyaltyPoints/100)) {
+      setErrorMessage(`Discount value can not be greater than $${saleCustomer.loyaltyPoints/100}!`);
+      setIsProcessing('');
+      return;
+    }else if (saleCustomer && (saleCustomer.loyaltyPoints/100 > 100)) {
+      setErrorMessage(`Discount value can not be greater than total!`);
+      setIsProcessing('');
+      return;
+    }
 
     try {
       const response = await fetch(`https://api.clover.com/v3/merchants/${softwareConfig.cloverMerchantId}/orders?orderBy=createdTime DESC&limit=1`, {
@@ -274,7 +294,7 @@ const CheckoutScreen = ({ user, goToSettings } : {user: NonSensitiveUserData, go
       setIsProcessing('');
       return;
     }
-    // await kickCashDrawer(printerIp); (open cash drawer). If possible, check the cash has been saved before saving to the db
+    await kickCashDrawer(softwareConfig.starPrinterIP) //(open cash drawer). If possible, check the cash has been saved before saving to the db
     saveTransactionToDb('CASH')
   };
 

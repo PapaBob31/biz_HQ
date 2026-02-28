@@ -1,17 +1,9 @@
 import { app, BrowserWindow, ipcMain, safeStorage } from 'electron';
 import path from 'node:path'
 import { fileURLToPath } from 'url';
-import { PrismaClient } from '../prisma/generated/client'
-import bcrypt from 'bcryptjs';
 import fs from 'fs';
-import { PrismaPg } from '@prisma/adapter-pg'
 import "dotenv/config";
 import Store from 'electron-store'
-import crypto from 'node:crypto'; // For generating UUIDs
-import { autoUpdater } from 'electron-updater';
-
-const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL || "postgresql://neondb_owner:npg_Q35WmzIeauUP@ep-still-king-ah2bgu7k-pooler.c-3.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require" })
-const prisma = new PrismaClient({ adapter })
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -21,32 +13,6 @@ const DIST = path.join(__dirname, '../dist')
 
 let mainWindow;
 
-
-// Tell it where to check for updates
-autoUpdater.setFeedURL({
-  provider: 'generic',
-  url: `${import.meta.env.VITE_BACKEND_API_BASE_URL}/updates`
-});
-
-// Silent auto-update settings
-autoUpdater.autoDownload = true;
-autoUpdater.autoInstallOnAppQuit = true;
-
-
-app.on('ready', () => {
-  createWindow();
-
-  // Check for updates 5 seconds after app starts
-  setTimeout(() => {
-    autoUpdater.checkForUpdates();
-  }, 5000);
-});
-
-app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') {
-    app.quit();
-  }
-});
 
 function createWindow() {
   mainWindow = new BrowserWindow({
