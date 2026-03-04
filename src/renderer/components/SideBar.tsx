@@ -60,7 +60,8 @@ const Sidebar: React.FC<SidebarProps> = ({ activePage, onNavigate, user }) => {
             <p className="text-xs text-slate-500 capitalize">{user?.role}</p>
           </div>
         </div>
-        <button onClick={() => window.location.reload()} className="w-full flex items-center gap-4 px-4 py-3 rounded-lg hover:bg-red-900/20 hover:text-red-400 transition-colors">
+        <button onClick={() => window.location.reload()} 
+          className="cursor-pointer w-full flex items-center gap-4 px-4 py-3 rounded-lg hover:bg-red-900/20 hover:text-red-400 transition-colors">
           <LogOut size={20} onClick={() => onNavigate("Login")} />
           <span className="font-medium">Sign Out</span>
         </button>

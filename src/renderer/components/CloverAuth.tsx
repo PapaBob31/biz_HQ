@@ -6,7 +6,7 @@ import { GeneralProgramSettings } from "../../App"
 
 export default function CloverAuthScreen({refreshSettings} : {refreshSettings: ()=>void})  {
   const softwareConfig = useContext(GeneralProgramSettings)!
-  const [merchantId, setMerchantId] = useState(softwareConfig.cloverMerchantId||'');
+  const [merchantId, setMerchantId] = useState(softwareConfig.cloverMerchantId||''); // TWGTEY6EYP8W1
   const [apiToken, setApiToken] = useState(softwareConfig.cloverAccessToken||'')
   const [detailsValid, setDetailsValid] = useState(Boolean(softwareConfig.cloverMerchantId && softwareConfig.cloverAccessToken));
   const [validating, setDetailsIsValidating] = useState(false);

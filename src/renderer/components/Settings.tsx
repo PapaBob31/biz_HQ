@@ -256,15 +256,15 @@ function HardwareSettings({printerIp, refreshSettings, businessName} : {printerI
 
               <div className="grid grid-cols-2 gap-4">
                 <button 
-                  onClick={() => kickCashDrawer(printerIp)}
-                  className="flex flex-col items-center justify-center p-4 border-2 border-gray-100 rounded-xl hover:border-blue-500 transition"
+                  onClick={() => kickCashDrawer(starPrinterIp)}
+                  className="cursor-pointer flex flex-col items-center justify-center p-4 border-2 border-gray-100 rounded-xl hover:border-blue-500 transition"
                 >
                   <LockOpen size={20}/>
                   <span className="text-sm font-bold">Open Drawer</span>
                 </button>
                 <button 
-                  onClick={() => printReceipt(printerIp, { id: 'TEST', items: [], total: 0, tax: 0, totalAfterTax: 0 }, businessName )}
-                  className="flex flex-col items-center justify-center p-4 border-2 border-gray-100 rounded-xl hover:border-blue-500 transition"
+                  onClick={() => printReceipt(starPrinterIp, { id: 'TEST', items: [], total: 0, tax: 0, subTotal: 0 }, businessName )}
+                  className="cursor-pointer flex flex-col items-center justify-center p-4 border-2 border-gray-100 rounded-xl hover:border-blue-500 transition"
                 >
                   <ReceiptText size={20}/>
                   <span className="text-sm font-bold">Test Receipt</span>

@@ -8,8 +8,6 @@ import SuccessToast from "./SalesToast"
 import { type NonSensitiveUserData }  from "./../../App"
 import { GeneralProgramSettings } from "../../App"
 
-// client/utils/printer.ts
-
 
 function CustomerSelection({selectCustomerMain} : {selectCustomerMain: (customer: Customer|null) => void}) {
   const [selectedCustomer, setSelectedCustomer] = useState<Customer|null>(null);
@@ -178,6 +176,91 @@ function updateInventory(cart: CartItem[], currInventory: Product[]) {
   return newInventory;
 }
 
+interface CloverProps {
+  saveTransaction: ()=>void,
+  total: number,
+  merchantId: string,
+  apiToken: string,
+  stopProcessing: ()=>void
+}
+
+
+function CloverPopup({saveTransaction, total, merchantId, apiToken, stopProcessing}: CloverProps){
+  const [paymentSuccessful, setPaymentSuccessful] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+  const paymentPollTimeout = useRef(0)
+
+  function cancelPayment() {
+    paymentPollTimeout.current = 0;
+    stopProcessing();
+  }
+
+  async function startCloverPaymentProcessing() {
+    let lastPaymentTimestamp = 0;
+    if (errorMessage)
+      setErrorMessage('');
+
+    try {
+      const response = await fetch(`https://api.clover.com/v3/merchants/${merchantId}/orders?orderBy=createdTime DESC&limit=1`, {
+        headers: {"Authorization": `Bearer ${apiToken}`}
+      })
+      if (response.status === 200) {
+        const resBody = await response.json()
+        lastPaymentTimestamp = resBody.elements[0].createdTime;
+      }else {
+        setErrorMessage("Clover Payment Request Failed")
+      }
+    }catch(error) {
+      console.log(error);
+      setErrorMessage("Clover Payment Request Failed")
+    }
+
+    paymentPollTimeout.current = Date.now() + 180000 // 3 minutes from the current time
+    const response = await pollForLatestPaymentOnClover(total, merchantId, apiToken, paymentPollTimeout, lastPaymentTimestamp)
+    if (response === "Payment found") {
+      setPaymentSuccessful(true)
+      saveTransaction();
+    }else if (response !== "Cancelled"){
+      setErrorMessage(response)
+    }
+  }
+
+  useEffect(() => {
+    startCloverPaymentProcessing()
+  }, [])
+
+  if (paymentSuccessful) {
+    return (
+      <div className="z-40 fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center">
+        <div className="flex flex-col justify-center bg-white px-4 py-6 rounded-xl min-w-100 text-center">
+          <img src="./clover-icon.svg" className="block w-6 mx-auto mb-4"/>
+          <p className="text-center text-green-600">Clover Payment Successful!</p>
+          <button className="cursor-pointer bg-green-500 text-white py-1 px-4 rounded-lg w-fit mx-auto mt-4" onClick={stopProcessing}>Close</button>
+        </div>
+      </div>
+    )
+  }
+
+
+  return (
+    <div className="z-40 fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center">
+      <div className="flex flex-col justify-center bg-white px-4 py-6 rounded-xl min-w-100 text-center">
+        <img src="./clover-icon.svg" className="block w-6 mx-auto mb-4"/>
+        {errorMessage ? <p className="text-red-700">{errorMessage}</p> : 
+          <div className="flex justify-between items-center gap-2 text-green-600">
+            <p>Waiting for the clover device to process payment of ${total}</p>
+            <span className="block border-4 border-green-700 w-6 h-6 border-b-green-400 rounded-full animate-spin"></span>
+          </div>
+        }
+        <div className="flex justify-center">
+          {errorMessage && <button className="cursor-pointer bg-green-500 text-white py-1 px-4 rounded-lg w-fit mx-auto mt-4" onClick={startCloverPaymentProcessing}>Retry</button>}
+          <button className="cursor-pointer bg-red-500 text-white py-1 px-4 rounded-lg w-fit mx-auto mt-4" onClick={cancelPayment}>Cancel</button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 const CheckoutScreen = ({ user, goToSettings } : {user: NonSensitiveUserData, goToSettings: ()=>void}) => {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [inventory, setInventory] = useState<Product[]>([]);
@@ -190,7 +273,6 @@ const CheckoutScreen = ({ user, goToSettings } : {user: NonSensitiveUserData, go
   const [saleCustomer, setSaleCustomer] = useState<Customer|null>(null)
   const [loyaltyDiscount, setLoyaltyDiscount]  = useState(0)
   const [inventoryReqTracker, setInventoryReqTracker] = useState("loading")
-  const paymentPollTimeout = useRef(0)
   const softwareConfig = useContext(GeneralProgramSettings)!;
 
   const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
@@ -238,62 +320,45 @@ const CheckoutScreen = ({ user, goToSettings } : {user: NonSensitiveUserData, go
       console.log("B", error)
       const msg = error.response?.data?.error || "Unexpected Error. Please try again.";
       setErrorMessage(msg);
-    }).finally(() => setIsProcessing(''))
+    }).finally(() => {
+      if (isProcessing === "CASH")
+        setIsProcessing('')
+    })
+  }
+
+  function validateSaleDetails() {
+    if (saleCustomer && (loyaltyDiscount > saleCustomer.loyaltyPoints/100)) {
+      setErrorMessage(`Discount value can not be greater than $${saleCustomer.loyaltyPoints/100}!`);
+      setIsProcessing('');
+      return false;
+    }else if (saleCustomer && (saleCustomer.loyaltyPoints/100 > 100)) {
+      setErrorMessage(`Discount value can not be greater than total!`);
+      setIsProcessing('');
+      return false;
+    }
+
+    return true;
   }
 
   async function handleCloverPayment() {
+    const validSale = validateSaleDetails();
+    if (!validSale) {
+      return;
+    }
+
     setIsProcessing('CLOVER');
     setErrorMessage('');
-    let lastPaymentTimestamp = 0;
-
-    if (saleCustomer && (loyaltyDiscount > saleCustomer.loyaltyPoints/100)) {
-      setErrorMessage(`Discount value can not be greater than $${saleCustomer.loyaltyPoints/100}!`);
-      setIsProcessing('');
-      return;
-    }else if (saleCustomer && (saleCustomer.loyaltyPoints/100 > 100)) {
-      setErrorMessage(`Discount value can not be greater than total!`);
-      setIsProcessing('');
-      return;
-    }
-
-    try {
-      const response = await fetch(`https://api.clover.com/v3/merchants/${softwareConfig.cloverMerchantId}/orders?orderBy=createdTime DESC&limit=1`, {
-        headers: {"Authorization": `Bearer ${softwareConfig.cloverAccessToken}`}
-      })
-      if (response.status === 200) {
-        const resBody = await response.json()
-        lastPaymentTimestamp = resBody.elements[0].createdTime;
-      }else {
-        setErrorMessage("Clover Payment Request Failed")
-      }
-    }catch(error) {
-      console.log(error);
-      setErrorMessage("Clover Payment Request Failed")
-    }
-
-    paymentPollTimeout.current = Date.now() + 180000 // 3 minutes from the current time
-    const response = await pollForLatestPaymentOnClover(total, softwareConfig.cloverMerchantId, softwareConfig.cloverAccessToken, paymentPollTimeout, lastPaymentTimestamp)
-    if (response === "Payment found") {
-      saveTransactionToDb('CLOVER')
-      setIsProcessing('')
-    }else if (response !== "Cancelled"){
-      setErrorMessage(response)
-    }
   };
 
   async function handleCashPayment() {
+    const validSale = validateSaleDetails();
+    if (!validSale) {
+      return;
+    }
+
     setIsProcessing('CASH');
     setErrorMessage('');
 
-    if (saleCustomer && (loyaltyDiscount > saleCustomer.loyaltyPoints/100)) {
-      setErrorMessage(`Discount value can not be greater than $${saleCustomer.loyaltyPoints/100}!`);
-      setIsProcessing('');
-      return;
-    }else if (saleCustomer && (saleCustomer.loyaltyPoints/100 > 100)) {
-      setErrorMessage(`Discount value can not be greater than total!`);
-      setIsProcessing('');
-      return;
-    }
     await kickCashDrawer(softwareConfig.starPrinterIP) //(open cash drawer). If possible, check the cash has been saved before saving to the db
     saveTransactionToDb('CASH')
   };
@@ -305,7 +370,7 @@ const CheckoutScreen = ({ user, goToSettings } : {user: NonSensitiveUserData, go
   }, [saleCustomer])
 
 
-  // 1. Load Inventory for the manual selection grid
+  // Load Inventory for the manual selection grid
   useEffect(() => {
     if (inventoryReqTracker === "loading") {
       api.get('/api/inventory')
@@ -321,7 +386,6 @@ const CheckoutScreen = ({ user, goToSettings } : {user: NonSensitiveUserData, go
     
   }, []);
 
-  // 2. Helper to add item to cart (Shared by scanner and grid)
   const addToCart = (product: Product) => {
     setCart(currentCart => {
       const existing = currentCart.find(item => item.id === product.id);
@@ -368,11 +432,6 @@ const CheckoutScreen = ({ user, goToSettings } : {user: NonSensitiveUserData, go
     }
   }
 
-  function cancelCloverPayment() {
-    paymentPollTimeout.current = 0;
-    setErrorMessage('')
-    setIsProcessing('')
-  }
 
   // 3. Hardware Hook: Listen for global scans
   useBarcodeScanner(async (barcode) => {
@@ -507,21 +566,13 @@ const CheckoutScreen = ({ user, goToSettings } : {user: NonSensitiveUserData, go
             ) : 'CASH PAYMENT'}
           </button>
           {isProcessing === 'CLOVER' && (
-           <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center">
-              <div className="flex flex-col justify-center bg-white px-4 py-6 rounded-xl min-w-100 text-center">
-                <img src="./clover-icon.svg" className="block w-6 mx-auto mb-4"/>
-                {errorMessage ? <p className="text-red-700">{errorMessage}</p> : 
-                  <div className="flex justify-between items-center gap-2 text-green-600">
-                    <p>Waiting for the clover device to process payment of ${total}</p>
-                    <span className="block border-4 border-green-700 w-6 h-6 border-b-green-400 rounded-full animate-spin"></span>
-                  </div>
-                }
-                <div className="flex justify-center">
-                  {errorMessage && <button className="cursor-pointer bg-green-500 text-white py-1 px-4 rounded-lg w-fit mx-auto mt-4" onClick={handleCloverPayment}>Retry</button>}
-                  <button className="cursor-pointer bg-red-500 text-white py-1 px-4 rounded-lg w-fit mx-auto mt-4" onClick={cancelCloverPayment}>Cancel</button>
-                </div>
-              </div>
-            </div>
+            <CloverPopup 
+              saveTransaction={()=>saveTransactionToDb('CLOVER')} 
+              total={total}
+              merchantId={softwareConfig.cloverMerchantId}
+              apiToken={softwareConfig.cloverAccessToken} 
+              stopProcessing={()=>setIsProcessing('')}
+            />
           )}
           <button className={`
             w-full hover:bg-green-50 disabled:bg-gray-100 disabled:cursor-not-allowed bg-white border-2 border-[#280] 

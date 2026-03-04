@@ -18,6 +18,7 @@ import CashOut from "./renderer/components/Cashout"
 import SalesRecapScreen from "./renderer/components/SalesRecap"
 import Audit from "./renderer/components/Audit"
 import axios, { type AxiosInstance } from 'axios'
+import ExpiredSessionInfo from './renderer/components/SessionExpired';
 
 type Page = (
   'Admin setup' | 'Authorize' | 'Login' | 'Dashboard' | 'Inventory' | 'Sales' | 'OTP Verification' | 'Cash In' | 'Cash Out' | 
@@ -53,6 +54,7 @@ const App: React.FC = () => {
   const [accessToken, setAccessToken] = useState("")
   const [signupForm, setSignupForm] = useState<any>({username: "", email: "", password: "", confirmPassword: ""})
   const [softwareConfig, setSoftwareConfig] =  useState<SoftwareConfig | null>(null)
+  const [sessionExpired, setSessionExpired] = useState(false)
 
   const api = axios.create(
     { baseURL: import.meta.env.VITE_BACKEND_API_BASE_URL, 
@@ -62,19 +64,22 @@ const App: React.FC = () => {
 
 
   api.interceptors.response.use((response) => {
-    const newToken = response.headers['x-new-access-token'];
+    // Tokens have an auto-refresh feature. i.e. A new token will be sent if it remains an hour or less for the token used to authenticate the last request to expire.
+    const newToken = response.headers['x-new-access-token']; 
     if (newToken) {
       api.defaults.headers.common['Authorization'] = `Bearer ${newToken}`;
     }
     return response;
   }, (error) => {
     if (error.response?.status === 401) {
+      setSessionExpired(true);
     }
     return Promise.reject(error);
   });
 
   useEffect(() => {
     if (currentPage === 'Main loading') {
+      setSessionExpired(false);
       api.get("/api/employees/confirm-admin-exist")
       .then(response => {
         if (response.data.message) { // boolean value
@@ -121,6 +126,7 @@ const App: React.FC = () => {
   return (
 
     <main className="flex h-screen overflow-hidden bg-slate-50 w-screen">
+      {sessionExpired && <ExpiredSessionInfo goToLogin={()=>setCurrentPage('Main loading')}/>}
       <GeneralProgramSettings value={softwareConfig}>
         {showSidebar && (
           <SideBar 
@@ -131,10 +137,8 @@ const App: React.FC = () => {
         )}
         <AxiosHttpRequest.Provider value={api}>
           <div className="flex-1 overflow-y-auto">
-            {/* <ExcelUpload/> */}
             {currentPage === 'Login' && (
               <AuthScreeen onAuthSuccess={handleAuthCompletion} />
-              // <LoginScreen type={'reset'} email="b" onSend={()=>{}} isLoading={true} />
             )}
             {currentPage === 'Main loading' && <LoadingScreen/>}
             {currentPage === 'Admin setup' && <AdminSignup navigateTo={setCurrentPage as any} storeSignupForm={setSignupForm}/>}

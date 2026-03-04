@@ -33,7 +33,7 @@ export default function SuccessToast({saleId} : {saleId: number|null}) {
     }
     return (
       <>
-        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 flex flex-col gap-2">
+        <div className="z-50 fixed top-4 left-1/2 -translate-x-1/2 z-50 flex flex-col gap-2">
           {popups.map(popup => (
             <div key={popup.id} className="flex items-center gap-3 bg-green-200 border-2 border-green-300 text-green-500 rounded-lg shadow-lg px-4 py-3 animate-fade-in">
               <span className="font-medium text-gray-900">{popup.message}</span>
