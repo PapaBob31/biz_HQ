@@ -1,5 +1,5 @@
 import React, { useState, createContext, useEffect  } from 'react';
-import AuthScreeen from './renderer/components/LoginScreen';
+import LoginScreen from './renderer/components/LoginScreen';
 import Dashboard from './renderer/components/Dashboard';
 import Inventory from './renderer/components/Inventory';
 import SideBar from './renderer/components/SideBar';
@@ -19,10 +19,12 @@ import SalesRecapScreen from "./renderer/components/SalesRecap"
 import Audit from "./renderer/components/Audit"
 import axios, { type AxiosInstance } from 'axios'
 import ExpiredSessionInfo from './renderer/components/SessionExpired';
+import AdminVerificationPrompt from "./renderer/components/AdminVerificationPrompt"
+import ForgotPassword from "./renderer/components/ForgotPassword"
 
 type Page = (
-  'Admin setup' | 'Authorize' | 'Login' | 'Dashboard' | 'Inventory' | 'Sales' | 'OTP Verification' | 'Cash In' | 'Cash Out' | 
-  'Settings' | 'Employees' | 'Expenses' | 'Customers'| 'Main loading' | 'Network Error' | 'Low Stock Alerts' | 'Audit' | 'Sales Recap'
+  'Admin setup' | 'Authorize' | 'Login' | 'Dashboard' | 'Inventory' | 'Sales' | 'Admin Verification Prompt' | 'Admin Verification OTP' | 'Cash In' | 'Cash Out' | 
+  'Settings' | 'Employees' | 'Expenses' | 'Customers'| 'Main loading' | 'Network Error' | 'Low Stock Alerts' | 'Audit' | 'Sales Recap' | 'Password Reset'
 )
 
 export interface NonSensitiveUserData {
@@ -62,7 +64,6 @@ const App: React.FC = () => {
     }
   );
 
-
   api.interceptors.response.use((response) => {
     // Tokens have an auto-refresh feature. i.e. A new token will be sent if it remains an hour or less for the token used to authenticate the last request to expire.
     const newToken = response.headers['x-new-access-token']; 
@@ -71,7 +72,8 @@ const App: React.FC = () => {
     }
     return response;
   }, (error) => {
-    if (error.response?.status === 401) {
+    const setupScreens = ['Admin setup', 'Admin Verification OTP', 'Main loading',  'Network Error', 'Login']
+    if (error.response?.status === 401 && !setupScreens.includes(currentPage)) {
       setSessionExpired(true);
     }
     return Promise.reject(error);
@@ -121,7 +123,7 @@ const App: React.FC = () => {
     }
   };
 
-  const showSidebar = !['Login', 'Admin setup', 'Main loading', 'Network Error', 'OTP Verification'].includes(currentPage);
+  const showSidebar = !['Login', 'Admin setup', 'Main loading', 'Network Error', 'Admin Verification Prompt', 'Admin Verification OTP', 'Password Reset'].includes(currentPage);
 
   return (
 
@@ -138,7 +140,7 @@ const App: React.FC = () => {
         <AxiosHttpRequest.Provider value={api}>
           <div className="flex-1 overflow-y-auto">
             {currentPage === 'Login' && (
-              <AuthScreeen onAuthSuccess={handleAuthCompletion} />
+              <LoginScreen onLoginSuccess={handleAuthCompletion} navigateTo={setCurrentPage}/>
             )}
             {currentPage === 'Main loading' && <LoadingScreen/>}
             {currentPage === 'Admin setup' && <AdminSignup navigateTo={setCurrentPage as any} storeSignupForm={setSignupForm}/>}
@@ -155,7 +157,9 @@ const App: React.FC = () => {
             {currentPage === 'Low Stock Alerts' && <LowStockScreen/>}
             {currentPage === 'Sales Recap' && <SalesRecapScreen/>}
             {currentPage === 'Audit' && <Audit user={user!}/>}
-            {currentPage === 'OTP Verification' && signupForm.email && <OtpVerification navigateTo={setCurrentPage as any} email={signupForm.email}/>}
+            {currentPage === 'Password Reset' && <ForgotPassword navigateTo={setCurrentPage}/>}
+            {currentPage === 'Admin Verification Prompt' && <AdminVerificationPrompt navigateTo={setCurrentPage} storeSignupForm={setSignupForm}/>}
+            {currentPage === 'Admin Verification OTP' && signupForm.email && <OtpVerification navigateTo={setCurrentPage as any} email={signupForm.email}/>}
           </div>
         </AxiosHttpRequest.Provider>
       </GeneralProgramSettings>
@@ -164,4 +168,5 @@ const App: React.FC = () => {
 };
 
 export default App;
+
 

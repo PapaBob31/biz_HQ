@@ -31,7 +31,7 @@ export default function AdminSignup({navigateTo, storeSignupForm}: {navigateTo: 
     .then((response) => {
       console.log(response)
       storeSignupForm(data)
-      navigateTo('OTP Verification')
+      navigateTo('Admin Verification OTP')
     })
     .catch(error => {
       console.log(error.message)

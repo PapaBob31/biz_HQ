@@ -100,7 +100,7 @@ function Items({ selectItem } : { selectItem: (item: Product) => void }) {
         <ul className="p-2 rounded-sm mt-2 max-h-150 h-full overflow-y-auto">
           {items.map((item) => (
             <li key={item.id}>
-              <button className="block hover:bg-gray-100 border-b border-gray-100 w-full text-left cursor-pointer p-1" onClick={() => selectItem(item)}>
+              <button className="block hover:bg-gray-100 border-b border-gray-100 w-full text-left cursor-pointer px-1 py-2" onClick={() => selectItem(item)}>
                 <p className="font-semibold mb-1"><span className="text-xs text-slate-500">{item.sku}</span> {item.name}</p>
                 <p><span className="text-blue-400">{item.category}</span> <span className="text-gray-700">{item.stockCount} item(s)</span></p>
               </button>
@@ -220,7 +220,7 @@ export default function InventoryDiscrepancy({ user } : {user: NonSensitiveUserD
                 <th className="px-4 py-2 text-xs font-bold text-slate-500 uppercase text-center">New Quantity</th>
                 <th className="px-4 py-2 text-xs font-bold text-slate-500 uppercase text-center">Quantity Change</th>
                 <th className="px-4 py-2 text-xs font-bold text-slate-500 uppercase">Reason</th>
-                <th className="px-4 py-2 text-xs font-bold text-slate-500 uppercase">User</th>
+                <th className="px-4 py-2 text-xs font-bold text-slate-500 uppercase">Employee</th>
               </tr>
             </thead>
             {logs.length > 0 && (

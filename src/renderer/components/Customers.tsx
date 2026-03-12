@@ -253,12 +253,12 @@ export default function CustomerScreen() {
             </div>
 
             {/* Placeholder for Purchase History */}
-            <div className="space-y-4 pt-4">
+            {/* <div className="space-y-4 pt-4">
               <h3 className="font-bold text-slate-800 flex items-center gap-2"><History size={18}/> Recent Transactions</h3>
               <div className="text-center py-12 border-2 border-dashed rounded-3xl text-slate-400">
                 Purchase history visualization coming soon...
               </div>
-            </div>
+            </div> */}
           </div>
         ) : (
           <div className="h-full flex flex-col items-center justify-center text-slate-400">

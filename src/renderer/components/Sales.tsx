@@ -1,7 +1,7 @@
 import { useState, useEffect, useContext, useRef } from 'react';
 import { Trash2, Minus, Plus, User, PackageOpen, AlertCircle, X } from 'lucide-react';
 import { AxiosHttpRequest } from "../../App"
-import { printReceipt, kickCashDrawer } from "./utils/printer"
+import { printReceipt, kickCashDrawer } from "./utils/printer.js"
 import type { Product, Customer } from '../../../prisma/generated/client';
 import { useBarcodeScanner } from "./hooks"
 import SuccessToast from "./SalesToast"
@@ -279,10 +279,10 @@ const CheckoutScreen = ({ user, goToSettings } : {user: NonSensitiveUserData, go
   const tax = subtotal * TAX_RATE;
   const total = subtotal + tax - loyaltyDiscount;
 
-  function updateInventoryUI(cart: CartItem[]) {
-    const newInventory = updateInventory(cart, inventory);
-    setInventory(newInventory);
-  }
+  // function updateInventoryUI(cart: CartItem[]) {
+  //   const newInventory = updateInventory(cart, inventory);
+  //   setInventory(newInventory);
+  // }
 
   async function saveTransactionToDb(paymentMethod: 'CASH'|'CLOVER') {
     const saleData: any = {
@@ -304,16 +304,7 @@ const CheckoutScreen = ({ user, goToSettings } : {user: NonSensitiveUserData, go
       setLastSaleId(response.data.saleId);
       // print receipt
       printReceipt(softwareConfig.starPrinterIP, { ...saleData, id: response.data.saleId, createdAt: response.data.createdAt }, softwareConfig.storeName)
-      .then(res => {
-        if (!res.ok){
-          alert(`Unexpected Error ${res.status} while trying to print. Please make sure the printer is connected and properly configured in this software's settings`)
-        }
-      })
-      .catch(err => {
-        console.log(err); 
-        alert("Unexpected Error while trying to print. Please make sure the printer is connected and properly configured in this software's settings")
-      })
-      updateInventoryUI(cart)
+      // updateInventoryUI(cart)
       setCart([]);
     })
     .catch(error => {
@@ -321,8 +312,10 @@ const CheckoutScreen = ({ user, goToSettings } : {user: NonSensitiveUserData, go
       const msg = error.response?.data?.error || "Unexpected Error. Please try again.";
       setErrorMessage(msg);
     }).finally(() => {
-      if (isProcessing === "CASH")
+      console.log("aarrf", isProcessing)
+      if (isProcessing === "CASH"){
         setIsProcessing('')
+      }
     })
   }
 
@@ -387,6 +380,14 @@ const CheckoutScreen = ({ user, goToSettings } : {user: NonSensitiveUserData, go
   }, []);
 
   const addToCart = (product: Product) => {
+    // reduce product's stock count in inventory
+    setInventory(inventory.map((inventoryItem)=>{
+      if (inventoryItem.id === product.id) {
+        inventoryItem.stockCount--;
+      }
+      return inventoryItem
+    }))
+
     setCart(currentCart => {
       const existing = currentCart.find(item => item.id === product.id);
       if (existing) {
@@ -399,12 +400,27 @@ const CheckoutScreen = ({ user, goToSettings } : {user: NonSensitiveUserData, go
   };
 
   function incrementQuantity(product: Product) {
+    // reduce product's stock count in inventory
+    setInventory(inventory.map((inventoryItem)=>{
+      if (inventoryItem.id === product.id) {
+        inventoryItem.stockCount--;
+      }
+      return inventoryItem
+    }))
+
     setCart(currentCart => {
       return currentCart.map(item => item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item)
     });
   }
 
   function decrementQuantity(product: Product) {
+    // increase product's stock count in inventory
+    setInventory(inventory.map((inventoryItem)=>{
+      if (inventoryItem.id === product.id) {
+        inventoryItem.stockCount++;
+      }
+      return inventoryItem
+    }))
     const newCart = [];
     for (const item of cart) {
       if (item.id === product.id){
@@ -418,7 +434,14 @@ const CheckoutScreen = ({ user, goToSettings } : {user: NonSensitiveUserData, go
     setCart(newCart);
   }
 
-  function removeItemFromCart(itemId: number) {
+  function removeItemFromCart(itemId: number, itemQuantity: number) {
+    // reduce product's stock count in inventory
+    setInventory(inventory.map((inventoryItem)=>{
+      if (inventoryItem.id === itemId) {
+        inventoryItem.stockCount += itemQuantity;
+      }
+      return inventoryItem
+    }))
     setCart(cart.filter(item => item.id !== itemId));
   }
 
@@ -510,7 +533,7 @@ const CheckoutScreen = ({ user, goToSettings } : {user: NonSensitiveUserData, go
             <div key={item.id} className="text-sm text-slate-800 mb-4 p-2 bg-slate-50 rounded-lg mx-4">
               <div className='flex justify-between items-center'>
                 <p className="font-bold">{item.name}</p>
-                <button className="cursor-pointer hover:bg-red-100 p-2 rounded-full text-red-600" onClick={() => removeItemFromCart(item.id)}>
+                <button className="cursor-pointer hover:bg-red-100 p-2 rounded-full text-red-600" onClick={() => removeItemFromCart(item.id, item.quantity)}>
                   <Trash2 size={20}/>
                 </button>
               </div>

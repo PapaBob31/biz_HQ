@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useContext, useRef } from 'react';
-import { UserPlus, Shield, Mail, Key, AlertTriangle, Trash2, Edit2,Loader2, AlertCircle, RefreshCw, X } from 'lucide-react';
+import { UserPlus, Shield, Mail, Key, AlertTriangle, Trash2, Edit2,Loader2, AlertCircle, RefreshCw, X, Eye, EyeOff } from 'lucide-react';
 import type { Employee } from '../../../prisma/generated/client';
 import { AxiosHttpRequest } from '../../App';
 
@@ -71,6 +71,7 @@ function EmployeeEditModal(
   {employee: Employee, closeModal: () => void, updateEmployeeDisplay: (emp: Employee) => void, displayError: (arg: string)=>void}
 ) {
   const api = useContext(AxiosHttpRequest)!
+  const [passwordVisible, setPasswordVisible] = useState(false)
   function sendEmployeEditRequest(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
 
@@ -81,6 +82,7 @@ function EmployeeEditModal(
     .then(() => {
       updateEmployeeDisplay({id: employee.id, ...payload} as any)
       closeModal();
+      alert("Employee details updated successfully")
     })
     .catch(err => {
       console.log(err)
@@ -93,6 +95,7 @@ function EmployeeEditModal(
       <div className="bg-white p-8 rounded-xl w-120 shadow-xl">
         <h2 className="text-xl font-bold mb-4">Edit Employee Details</h2>
         <form onSubmit={sendEmployeEditRequest} className="space-y-4">
+          <label className="font-sembold">Username</label>
           <input 
             name="username"
             placeholder="User Name" 
@@ -100,6 +103,7 @@ function EmployeeEditModal(
             defaultValue={employee.username}
             required
           />
+          <label className="font-sembold">Email</label>
           <input 
             name="email"
             placeholder="Email" type="email"
@@ -107,6 +111,23 @@ function EmployeeEditModal(
             defaultValue={employee.email}
             required
           />
+          {employee.role !== "ADMIN" && (<div className="relative">
+            <label className="font-sembold">Password</label>
+            <input 
+              name="password"
+              type={passwordVisible ? "text" : "password"}
+              placeholder="Leave Blank if you don't want to change it"
+              className="w-full p-2 border rounded border border-slate-300 focus:ring-2 focus:ring-blue-500 outline-none"
+            />
+            <button
+              type="button"
+              onClick={() => setPasswordVisible(!passwordVisible)}
+              className="absolute right-3 top-9 text-gray-400 hover:text-gray-600"
+            >
+              {passwordVisible ? <EyeOff size={20} /> : <Eye size={20} />}
+            </button>
+          </div>)}
+          <label className="font-sembold">Role</label>
           <select 
             name="role"
             className="w-full p-2 border rounded bg-white"
@@ -258,10 +279,6 @@ export default function Employees() {
                 <Mail size={14} className="text-slate-400" />
                 {emp.email ? emp.email : <span className="rounded-lg p-1 bg-slate-100 text-xs">No Email Available</span>}
               </div>
-              {/* <div className="flex items-center gap-2">
-                <Key size={14} className="text-slate-400" />
-                PASSWORD: <span className="font-mono font-bold text-slate-800">****</span>
-              </div> */}
             </div>
 
             <div className="mt-6 pt-4 border-t border-slate-50 flex justify-end gap-3 transition-opacity">

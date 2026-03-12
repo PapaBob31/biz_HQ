@@ -263,7 +263,7 @@ function HardwareSettings({printerIp, refreshSettings, businessName} : {printerI
                   <span className="text-sm font-bold">Open Drawer</span>
                 </button>
                 <button 
-                  onClick={() => printReceipt(starPrinterIp, { id: 'TEST', items: [], total: 0, tax: 0, subTotal: 0 }, businessName )}
+                  onClick={() => printReceipt(starPrinterIp, { id: 'TEST', items: [], total: 0, tax: 13, subTotal: 0 }, 'TEST' )}
                   className="cursor-pointer flex flex-col items-center justify-center p-4 border-2 border-gray-100 rounded-xl hover:border-blue-500 transition"
                 >
                   <ReceiptText size={20}/>

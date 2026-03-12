@@ -49,7 +49,7 @@ export async function printReceipt (printerIp: string, sale: any, businessName: 
   </root>
   `;
 
-  return fetch(`http://${printerIp}/StarWebPRNT/SendMessage`, {
+  return fetch(`https://${printerIp}/StarWebPRNT/SendMessage`, {
     method: 'POST',
     headers: { 'Content-Type': 'text/xml', 'charset': 'UTF-8' },
     body: xml
@@ -69,7 +69,7 @@ export async function kickCashDrawer(printerIp: string) {
   </root>
   `;
   try {
-    const response = await fetch(`http://${printerIp}/StarWebPRNT/SendMessage`, {
+    const response = await fetch(`https://${printerIp}/StarWebPRNT/SendMessage`, {
       method: 'POST',
       headers: { 'Content-Type': 'text/xml' },
       body: xml
@@ -90,7 +90,7 @@ export const checkPrinterStatus = async (ip: string) => {
 
   try {
     // StarWebPRNT expects a POST to this specific endpoint
-    const response = await fetch(`http://${ip}/StarWebPRNT/SendMessage`, {
+    const response = await fetch(`https://${ip}/StarWebPRNT/SendMessage`, {
       method: 'POST',
       headers: { 'Content-Type': 'text/xml' },
       body: '<root></root>' // An empty root often triggers a status response

@@ -26,7 +26,7 @@ export default function OtpVerification({navigateTo, email}: {navigateTo: (path:
 
       // Focus next input
       if (element.value !== "" && index < 5) {
-          inputRefs.current[index + 1]?.focus();
+        inputRefs.current[index + 1]?.focus();
       }
     };
 

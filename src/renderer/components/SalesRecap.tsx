@@ -231,7 +231,7 @@ export default function SalesRecapScreen() {
           </div>
         </div>
         <div className="overflow-x-auto w-full">
-          <h2 className="text-xl font-semibold">All Sales</h2>
+          <h2 className="text-xl font-semibold">All Time Sales</h2>
           <table className="w-full text-left bg-white shadow-lg shadow-slate-200">
             <thead className="bg-slate-200 text-slate-700 text-xs uppercase font-semibold">
               <tr>
