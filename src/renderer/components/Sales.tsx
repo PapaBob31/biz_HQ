@@ -279,11 +279,6 @@ const CheckoutScreen = ({ user, goToSettings } : {user: NonSensitiveUserData, go
   const tax = subtotal * TAX_RATE;
   const total = subtotal + tax - loyaltyDiscount;
 
-  // function updateInventoryUI(cart: CartItem[]) {
-  //   const newInventory = updateInventory(cart, inventory);
-  //   setInventory(newInventory);
-  // }
-
   async function saveTransactionToDb(paymentMethod: 'CASH'|'CLOVER') {
     const saleData: any = {
       subTotal: subtotal,
@@ -304,18 +299,18 @@ const CheckoutScreen = ({ user, goToSettings } : {user: NonSensitiveUserData, go
       setLastSaleId(response.data.saleId);
       // print receipt
       printReceipt(softwareConfig.starPrinterIP, { ...saleData, id: response.data.saleId, createdAt: response.data.createdAt }, softwareConfig.storeName)
-      // updateInventoryUI(cart)
       setCart([]);
     })
     .catch(error => {
-      console.log("B", error)
       const msg = error.response?.data?.error || "Unexpected Error. Please try again.";
       setErrorMessage(msg);
     }).finally(() => {
-      console.log("aarrf", isProcessing)
-      if (isProcessing === "CASH"){
-        setIsProcessing('')
-      }
+      setIsProcessing(currVal => {
+        if (currVal === "CASH"){
+          return ''
+        }
+        return currVal
+      })
     })
   }
 
@@ -329,7 +324,6 @@ const CheckoutScreen = ({ user, goToSettings } : {user: NonSensitiveUserData, go
       setIsProcessing('');
       return false;
     }
-
     return true;
   }
 
@@ -376,7 +370,6 @@ const CheckoutScreen = ({ user, goToSettings } : {user: NonSensitiveUserData, go
         setInventoryReqTracker("failed")
       })
     }
-    
   }, []);
 
   const addToCart = (product: Product) => {
